@@ -1,0 +1,36 @@
+/* Cornerstone CRM — minimal admin styling. No external dependencies. */
+
+.cornerstone-crm-nav {
+	margin-bottom: 1em;
+}
+
+.cornerstone-crm-filters {
+	margin: 1em 0;
+	display: flex;
+	align-items: center;
+	gap: 0.5em;
+}
+
+.cornerstone-crm-inline-delete {
+	display: inline;
+}
+
+.cornerstone-crm-inline-delete .button-link-delete {
+	color: #b32d2e;
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.cornerstone-crm-pagination {
+	margin: 1em 0;
+	display: flex;
+	align-items: center;
+	gap: 0.75em;
+}
+
+.cornerstone-crm-form .form-table th {
+	width: 180px;
+}
