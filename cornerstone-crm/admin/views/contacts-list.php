@@ -2,14 +2,18 @@
 /**
  * Contacts list view.
  *
- * @var array  $items  Rows for the current page.
- * @var int    $total  Total matching rows.
- * @var int    $page   Current page number.
- * @var string $status Active pipeline_status filter.
- * @var string $notice Notice key to display, if any.
+ * @var array  $items          Rows for the current page.
+ * @var int    $total          Total matching rows.
+ * @var int    $page           Current page number.
+ * @var string $status         Active pipeline_status filter.
+ * @var string $notice         Notice key to display, if any.
+ * @var bool   $can_manage_all Whether the current user sees every agent's contacts.
+ * @var array  $owners         Map of user_id => owning agent's display name (broker view only).
  */
 
 defined( 'ABSPATH' ) || exit;
+
+$colspan = $can_manage_all ? 7 : 6;
 ?>
 <div class="wrap cornerstone-crm">
 	<h1 class="wp-heading-inline"><?php esc_html_e( 'Cornerstone CRM', 'cornerstone-crm' ); ?></h1>
@@ -35,6 +39,9 @@ defined( 'ABSPATH' ) || exit;
 		<thead>
 			<tr>
 				<th><?php esc_html_e( 'Name', 'cornerstone-crm' ); ?></th>
+				<?php if ( $can_manage_all ) : ?>
+					<th><?php esc_html_e( 'Agent', 'cornerstone-crm' ); ?></th>
+				<?php endif; ?>
 				<th><?php esc_html_e( 'Phone', 'cornerstone-crm' ); ?></th>
 				<th><?php esc_html_e( 'Email', 'cornerstone-crm' ); ?></th>
 				<th><?php esc_html_e( 'Role', 'cornerstone-crm' ); ?></th>
@@ -44,11 +51,14 @@ defined( 'ABSPATH' ) || exit;
 		</thead>
 		<tbody>
 			<?php if ( empty( $items ) ) : ?>
-				<tr><td colspan="6"><?php esc_html_e( 'No contacts yet.', 'cornerstone-crm' ); ?></td></tr>
+				<tr><td colspan="<?php echo (int) $colspan; ?>"><?php esc_html_e( 'No contacts yet.', 'cornerstone-crm' ); ?></td></tr>
 			<?php endif; ?>
 			<?php foreach ( $items as $item ) : ?>
 				<tr>
 					<td><?php echo esc_html( trim( $item['first_name'] . ' ' . $item['last_name'] ) ); ?></td>
+					<?php if ( $can_manage_all ) : ?>
+						<td><?php echo esc_html( $owners[ (int) $item['user_id'] ] ?? '' ); ?></td>
+					<?php endif; ?>
 					<td><?php echo esc_html( $item['phone'] ); ?></td>
 					<td><?php echo esc_html( $item['email'] ); ?></td>
 					<td><?php echo esc_html( ucwords( str_replace( '_', ' ', $item['role_tag'] ) ) ); ?></td>

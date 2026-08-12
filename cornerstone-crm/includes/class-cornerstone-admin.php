@@ -145,11 +145,16 @@ final class Cornerstone_Admin {
 		] );
 
 		return [
-			'items'   => $result['items'],
-			'total'   => $result['total'],
-			'page'    => $page,
-			'status'  => $status,
-			'notice'  => sanitize_key( $_GET['notice'] ?? '' ),
+			'items'          => $result['items'],
+			'total'          => $result['total'],
+			'page'           => $page,
+			'status'         => $status,
+			'notice'         => sanitize_key( $_GET['notice'] ?? '' ),
+			'can_manage_all' => $can_manage_all,
+			// Only resolved for the broker/admin view — an agent's own
+			// list is entirely their own records, so the column would be
+			// redundant and this skips the extra user lookups for them.
+			'owners'         => $can_manage_all ? self::owner_names_by_id( $result['items'] ) : [],
 		];
 	}
 
@@ -557,6 +562,25 @@ final class Cornerstone_Admin {
 			}
 			$contact = Cornerstone_Contacts::get( $contact_id, $user_id, $can_manage_all );
 			$names[ $contact_id ] = $contact ? trim( $contact['first_name'] . ' ' . $contact['last_name'] ) : __( '(unknown contact)', 'cornerstone-crm' );
+		}
+		return $names;
+	}
+
+	/**
+	 * Resolves the owning agent's display name for each row's user_id.
+	 * Only called for the broker/admin view (see contacts_list_data() and
+	 * friends) — WordPress's own user cache makes get_userdata() cheap
+	 * for the same small set of agents repeated across a page of rows.
+	 */
+	private static function owner_names_by_id( array $rows ): array {
+		$names = [];
+		foreach ( $rows as $row ) {
+			$owner_id = (int) $row['user_id'];
+			if ( isset( $names[ $owner_id ] ) ) {
+				continue;
+			}
+			$user = get_userdata( $owner_id );
+			$names[ $owner_id ] = $user ? $user->display_name : __( '(deleted user)', 'cornerstone-crm' );
 		}
 		return $names;
 	}
