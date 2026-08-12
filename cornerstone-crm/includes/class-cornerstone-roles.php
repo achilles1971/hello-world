@@ -67,6 +67,38 @@ final class Cornerstone_Roles {
 	}
 
 	/**
+	 * Defensive self-heal, run on every wp-admin request (see admin_init
+	 * hook in Cornerstone_Admin::init()). If a WordPress Administrator
+	 * (core 'manage_options' capability) is missing either Cornerstone
+	 * capability, grant it immediately rather than requiring a
+	 * deactivate/reactivate cycle.
+	 *
+	 * This exists because the one-time grant in register() can fail to
+	 * "stick" for reasons outside this plugin's control — most commonly a
+	 * persistent object cache (e.g. SiteGround's SG Optimizer /
+	 * Memcached/Redis) serving a stale copy of the roles option from the
+	 * moment activation ran, or activation being interrupted before it
+	 * reached this step. Cheap in the common case: the two
+	 * current_user_can() checks short-circuit to a no-op once the
+	 * capability is actually present, so this only ever touches the
+	 * database on the (rare, self-correcting) request where it's missing.
+	 */
+	public static function maybe_heal_administrator_access(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		if ( current_user_can( self::CAP_ACCESS ) && current_user_can( self::CAP_MANAGE_ALL ) ) {
+			return;
+		}
+
+		$administrator = get_role( 'administrator' );
+		if ( $administrator ) {
+			$administrator->add_cap( self::CAP_ACCESS );
+			$administrator->add_cap( self::CAP_MANAGE_ALL );
+		}
+	}
+
+	/**
 	 * Whether the given (or current) user may open the CRM at all.
 	 */
 	public static function can_access( ?int $user_id = null ): bool {

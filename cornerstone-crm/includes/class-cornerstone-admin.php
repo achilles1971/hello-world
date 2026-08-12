@@ -21,6 +21,11 @@ final class Cornerstone_Admin {
 	public const SLUG_TASKS        = 'cornerstone-crm-tasks';
 
 	public static function init(): void {
+		// Runs before any Cornerstone screen renders on this request; see
+		// the docblock on Cornerstone_Roles::maybe_heal_administrator_access()
+		// for why this self-heal exists.
+		add_action( 'admin_init', [ 'Cornerstone_Roles', 'maybe_heal_administrator_access' ] );
+
 		add_action( 'admin_menu', [ __CLASS__, 'register_menu' ] );
 		add_action( 'admin_enqueue_scripts', [ __CLASS__, 'enqueue_assets' ] );
 
