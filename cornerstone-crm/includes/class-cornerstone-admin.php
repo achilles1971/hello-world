@@ -135,11 +135,13 @@ final class Cornerstone_Admin {
 	}
 
 	private static function contacts_list_data( int $user_id, bool $can_manage_all ): array {
-		$status = sanitize_key( $_GET['pipeline_status'] ?? '' );
-		$page   = max( 1, absint( $_GET['paged'] ?? 1 ) );
+		$status   = sanitize_key( $_GET['pipeline_status'] ?? '' );
+		$agent_id = $can_manage_all ? absint( $_GET['agent_id'] ?? 0 ) : 0;
+		$page     = max( 1, absint( $_GET['paged'] ?? 1 ) );
 
 		$result = Cornerstone_Contacts::list_for_scope( $user_id, $can_manage_all, [
 			'pipeline_status' => $status,
+			'owner_id'        => $agent_id,
 			'page'            => $page,
 			'per_page'        => 20,
 		] );
@@ -149,13 +151,35 @@ final class Cornerstone_Admin {
 			'total'          => $result['total'],
 			'page'           => $page,
 			'status'         => $status,
+			'agent_id'       => $agent_id,
 			'notice'         => sanitize_key( $_GET['notice'] ?? '' ),
 			'can_manage_all' => $can_manage_all,
 			// Only resolved for the broker/admin view — an agent's own
-			// list is entirely their own records, so the column would be
-			// redundant and this skips the extra user lookups for them.
+			// list is entirely their own records, so the column/filter
+			// would be redundant and this skips the extra lookups for them.
 			'owners'         => $can_manage_all ? self::owner_names_by_id( $result['items'] ) : [],
+			'agent_choices'  => $can_manage_all ? self::crm_user_choices() : [],
 		];
+	}
+
+	/**
+	 * All WordPress users holding any Cornerstone capability (broker,
+	 * agent, or an administrator who inherited access), for the broker's
+	 * "Agent" filter dropdown. Ordered by display name.
+	 */
+	private static function crm_user_choices(): array {
+		$users = get_users( [
+			'role__in' => [ Cornerstone_Roles::ROLE_BROKER, Cornerstone_Roles::ROLE_AGENT, 'administrator' ],
+			'orderby'  => 'display_name',
+			'order'    => 'ASC',
+			'fields'   => [ 'ID', 'display_name' ],
+		] );
+
+		$choices = [];
+		foreach ( $users as $user ) {
+			$choices[ (int) $user->ID ] = $user->display_name;
+		}
+		return $choices;
 	}
 
 	public static function handle_save_contact(): void {

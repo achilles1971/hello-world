@@ -6,9 +6,11 @@
  * @var int    $total          Total matching rows.
  * @var int    $page           Current page number.
  * @var string $status         Active pipeline_status filter.
+ * @var int    $agent_id       Active agent filter (0 = all agents; broker view only).
  * @var string $notice         Notice key to display, if any.
  * @var bool   $can_manage_all Whether the current user sees every agent's contacts.
  * @var array  $owners         Map of user_id => owning agent's display name (broker view only).
+ * @var array  $agent_choices  Map of user_id => display name for the Agent filter (broker view only).
  */
 
 defined( 'ABSPATH' ) || exit;
@@ -32,6 +34,15 @@ $colspan = $can_manage_all ? 7 : 6;
 				<option value="<?php echo esc_attr( $option ); ?>" <?php selected( $status, $option ); ?>><?php echo esc_html( ucwords( str_replace( '_', ' ', $option ) ) ); ?></option>
 			<?php endforeach; ?>
 		</select>
+		<?php if ( $can_manage_all ) : ?>
+			<label for="agent_id" class="screen-reader-text"><?php esc_html_e( 'Filter by agent', 'cornerstone-crm' ); ?></label>
+			<select name="agent_id" id="agent_id">
+				<option value=""><?php esc_html_e( 'All agents', 'cornerstone-crm' ); ?></option>
+				<?php foreach ( $agent_choices as $choice_id => $choice_name ) : ?>
+					<option value="<?php echo (int) $choice_id; ?>" <?php selected( $agent_id, $choice_id ); ?>><?php echo esc_html( $choice_name ); ?></option>
+				<?php endforeach; ?>
+			</select>
+		<?php endif; ?>
 		<button type="submit" class="button"><?php esc_html_e( 'Filter', 'cornerstone-crm' ); ?></button>
 	</form>
 
@@ -80,5 +91,11 @@ $colspan = $can_manage_all ? 7 : 6;
 		</tbody>
 	</table>
 
-	<?php Cornerstone_Admin::pagination_html( $page, $total, 20, Cornerstone_Admin::SLUG_CONTACTS, $status ? [ 'pipeline_status' => $status ] : [] ); ?>
+	<?php
+	$pagination_args = array_filter( [
+		'pipeline_status' => $status,
+		'agent_id'        => $agent_id ?: '',
+	] );
+	Cornerstone_Admin::pagination_html( $page, $total, 20, Cornerstone_Admin::SLUG_CONTACTS, $pagination_args );
+	?>
 </div>

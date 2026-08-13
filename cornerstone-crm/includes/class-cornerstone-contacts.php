@@ -195,6 +195,13 @@ final class Cornerstone_Contacts {
 		if ( ! $can_manage_all ) {
 			$where[]  = 'user_id = %d';
 			$params[] = $user_id;
+		} elseif ( ! empty( $args['owner_id'] ) ) {
+			// Only meaningful for the broker/admin view — an agent's own
+			// list is already restricted to themselves above, so a
+			// mismatched owner_id there would just (correctly) return
+			// nothing rather than needing a second check.
+			$where[]  = 'user_id = %d';
+			$params[] = absint( $args['owner_id'] );
 		}
 
 		if ( ! empty( $args['pipeline_status'] ) ) {
