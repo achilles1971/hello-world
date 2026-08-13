@@ -164,6 +164,50 @@ logged into wp-admin.
       deactivate/reactivate and without data loss.
 - [ ] Revert the test change afterward.
 
+## 8. Gmail Sync (optional module)
+
+Requires completing `includes/modules/gmail-sync/SETUP.md` first — a
+Google Cloud OAuth app, the `CORNERSTONE_CRM_ENCRYPTION_KEY` wp-config.php
+constant, and ideally a real server cron. Test on a real connected Gmail
+account, not just code review; none of this was exercised against a live
+Google API in the build environment.
+
+- [ ] With no encryption key defined, confirm **Cornerstone CRM → Gmail
+      Sync** shows the "not configured" error and the settings form
+      refuses to save.
+- [ ] Add the encryption key, reload — the error should clear.
+- [ ] As broker, save a Client ID/Secret. Reload the page — confirm the
+      Client Secret field is blank again (never redisplayed) while the
+      Client ID persists.
+- [ ] As an agent, click **Connect Gmail**, approve on Google's consent
+      screen, land back on the CRM with a "connected" notice and the
+      agent's Gmail address shown in the table.
+- [ ] Send a real email from that Gmail account to an address that
+      matches one of that agent's existing contacts.
+- [ ] Click **Sync Now** rather than waiting for cron. Confirm a new
+      Interaction appears on that contact: type `email`, note starting
+      with `[Gmail sync] Sent:`, dated to when the email was sent.
+- [ ] Send an email to an address that is *not* in any contact. Sync
+      again — confirm nothing gets logged for it.
+- [ ] Send an email to an address that belongs to a *different* agent's
+      contact. Sync the first agent's connection — confirm no
+      interaction is created (matching never crosses agents).
+- [ ] Click **Sync Now** a second time immediately, with nothing new
+      sent. Confirm no duplicate interaction is created for the email
+      from the previous step.
+- [ ] As broker, confirm you can **Disconnect** an agent's connection and
+      trigger **Sync Now** for them, but cannot see a "Connect" button on
+      their row (only the agent can authorize their own mailbox).
+- [ ] Revoke the app's access from myaccount.google.com → Security →
+      Third-party access instead of disconnecting in the CRM. Sync again
+      — confirm it fails gracefully with an auth error in the Status
+      column, rather than a fatal error, and that reconnecting from the
+      CRM recovers it.
+- [ ] Confirm the real cron job (Site Tools → Devs → Cron Jobs) is
+      actually invoking `wp-cron.php` on schedule — check
+      `last_synced_at`-driven "Last Synced" times advance roughly every
+      20 minutes without manually clicking Sync Now.
+
 ## Known gaps in this pass
 
 - No automated PHPUnit test suite ships with this version — WordPress's

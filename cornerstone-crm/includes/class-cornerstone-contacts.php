@@ -177,6 +177,32 @@ final class Cornerstone_Contacts {
 	}
 
 	/**
+	 * Finds one non-deleted contact by exact email match, scoped to a
+	 * single agent's own contacts only — no can_manage_all parameter on
+	 * purpose. Used by the Gmail sync module to match a sent email's
+	 * recipient to a contact; that match must never cross into another
+	 * agent's book of business, so this always scopes to the agent whose
+	 * mailbox is being synced, never "all."
+	 */
+	public static function find_by_email( string $email, int $user_id ): ?array {
+		global $wpdb;
+
+		$email = Cornerstone_Validate::email( $email );
+		if ( '' === $email ) {
+			return null;
+		}
+
+		$sql = $wpdb->prepare(
+			'SELECT * FROM ' . Cornerstone_DB::contacts() . ' WHERE user_id = %d AND email = %s AND deleted_at IS NULL ORDER BY id ASC LIMIT 1',
+			$user_id,
+			$email
+		);
+
+		$row = $wpdb->get_row( $sql, ARRAY_A );
+		return $row ?: null;
+	}
+
+	/**
 	 * Lists non-deleted contacts, optionally filtered by pipeline_status,
 	 * scoped to the acting user unless they can manage all records.
 	 *

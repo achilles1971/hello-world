@@ -50,11 +50,27 @@ require_once CORNERSTONE_CRM_PATH . 'includes/class-cornerstone-admin.php';
 require_once CORNERSTONE_CRM_PATH . 'includes/extensions.php';
 
 // ---------------------------------------------------------------------------
+// Modules — registered through the extension point in includes/extensions.php,
+// exactly as documented there, rather than required alongside the core
+// classes above. This is also the reference example for any future module.
+// ---------------------------------------------------------------------------
+
+add_action( 'cornerstone_crm_register_modules', function () {
+	require_once CORNERSTONE_CRM_PATH . 'includes/modules/gmail-sync/module.php';
+	Cornerstone_Gmail_Module::init();
+} );
+
+// ---------------------------------------------------------------------------
 // Activation / Deactivation
 // ---------------------------------------------------------------------------
 
 register_activation_hook( __FILE__, [ 'Cornerstone_Activator', 'activate' ] );
 register_deactivation_hook( __FILE__, [ 'Cornerstone_Deactivator', 'deactivate' ] );
+register_deactivation_hook( __FILE__, function () {
+	if ( class_exists( 'Cornerstone_Gmail_Cron' ) ) {
+		Cornerstone_Gmail_Cron::clear_schedule();
+	}
+} );
 
 // ---------------------------------------------------------------------------
 // Bootstrap

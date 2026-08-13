@@ -36,7 +36,15 @@ place — see the comment at the top of `uninstall.php`.
 
 Don't add new features by editing the core classes. Hook into
 `cornerstone_crm_register_modules` — see the docblock at the top of
-`includes/extensions.php` for the pattern.
+`includes/extensions.php` for the pattern, and
+`includes/modules/gmail-sync/module.php` for a real example.
+
+## Optional modules
+
+- **Gmail Sync** — captures a sent email as an Interaction automatically.
+  Not active until a broker completes the setup in
+  `includes/modules/gmail-sync/SETUP.md` (a Google Cloud OAuth app and a
+  wp-config.php encryption key are both required before it does anything).
 
 ## File structure
 
@@ -60,7 +68,20 @@ cornerstone-crm/
 │   ├── class-cornerstone-rest-transactions.php
 │   ├── class-cornerstone-rest-tasks.php
 │   ├── class-cornerstone-admin.php          Admin menu + form handlers
-│   └── extensions.php                       Future-module extension point
+│   ├── extensions.php                       Future-module extension point
+│   └── modules/
+│       └── gmail-sync/              Optional: auto-capture sent email as an Interaction
+│           ├── module.php                   Bootstrap, registered via the extension hook
+│           ├── class-gmail-crypto.php        Encrypts secrets at rest (libsodium)
+│           ├── class-gmail-settings.php      Site-wide OAuth Client ID/Secret
+│           ├── class-gmail-connection.php    Per-agent connection storage
+│           ├── class-gmail-client.php        Google OAuth + Gmail API HTTP calls
+│           ├── class-gmail-oauth.php         Authorize/callback flow
+│           ├── class-gmail-sync.php          Matches sent mail to contacts, logs Interactions
+│           ├── class-gmail-cron.php          20-minute scheduled sync
+│           ├── class-gmail-admin.php         Settings + connection status screen
+│           ├── views/gmail-sync.php
+│           └── SETUP.md              Required external setup (Google Cloud, encryption key)
 ├── admin/
 │   ├── css/admin.css
 │   └── views/                       Server-rendered list/form templates

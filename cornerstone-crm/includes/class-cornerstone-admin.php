@@ -519,6 +519,15 @@ final class Cornerstone_Admin {
 			self::SLUG_TRANSACTIONS => __( 'Transactions', 'cornerstone-crm' ),
 			self::SLUG_TASKS        => __( 'Tasks', 'cornerstone-crm' ),
 		];
+
+		/**
+		 * Lets a module registered via cornerstone_crm_register_modules
+		 * (see includes/extensions.php) add its own tab — e.g. Gmail
+		 * Sync — to the shared sub-nav without editing this file. Filtered
+		 * array is [ menu_slug => label ], appended in the order added.
+		 */
+		$tabs = apply_filters( 'cornerstone_crm_admin_nav_tabs', $tabs );
+
 		echo '<h2 class="nav-tab-wrapper cornerstone-crm-nav">';
 		foreach ( $tabs as $slug => $label ) {
 			$class = ( $slug === $active ) ? 'nav-tab nav-tab-active' : 'nav-tab';

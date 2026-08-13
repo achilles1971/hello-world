@@ -88,6 +88,43 @@ builder add-on — implementing a minimal broker CRM:
   accessible contact) is enforced in application code instead, before
   every insert.
 
+## Post-launch additions
+
+Built after the initial checkpoint above, on your live site once it was
+already active — each is a small, isolated change, not a re-review of the
+whole plugin:
+
+- **Broker capability self-heal.** You reported seeing only your own
+  contacts as admin, not every agent's — the `cornerstone_crm_manage_all`
+  grant hadn't stuck (most likely a stale object-cache copy of the roles
+  option at activation time). The plugin now checks for this on every
+  wp-admin page load and re-grants it if missing, no deactivate/reactivate
+  needed.
+- **Agent column + filter on Contacts.** The broker view now shows which
+  agent owns each contact, and can filter the list down to one agent.
+  Both are broker-only — an agent's own list is already just their own.
+- **Gmail Sync module** (`includes/modules/gmail-sync/`) — the first real
+  use of the extension hook. Each agent connects their own Gmail account;
+  a ~20-minute background sync matches new Sent-mail recipients against
+  that agent's own contacts and logs a matched send as an Interaction.
+  Deliberately scoped down from what "email integration" could mean:
+  - Metadata only (recipient, subject, date) — never message content —
+    via Google's narrower `gmail.metadata` OAuth scope.
+  - Periodic polling, not real-time push — no public webhook endpoint,
+    no Google Cloud Pub/Sub to secure and maintain.
+  - Each agent's refresh token, and the shared Google Client Secret, are
+    encrypted at rest (libsodium) with a key that lives only in
+    `wp-config.php`, never the database. Every storage path fails closed
+    — refuses to save or connect — if that key isn't configured.
+  - Requires setup outside the plugin (a Google Cloud OAuth app, the
+    encryption key, a real server cron) before it does anything — see
+    `includes/modules/gmail-sync/SETUP.md`. Nothing here is wired up or
+    reachable until a broker completes that setup.
+  - Not yet tested against a live Gmail account/Google Cloud project in
+    this environment, for the same reason as the rest of this plugin: no
+    live WordPress instance or Google credentials available here. Test
+    against a real connected account before relying on it.
+
 ## Known limitations / risks
 
 - No automated PHPUnit suite ships yet — see the note in
