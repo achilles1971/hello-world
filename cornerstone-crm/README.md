@@ -45,6 +45,36 @@ Don't add new features by editing the core classes. Hook into
   Not active until a broker completes the setup in
   `includes/modules/gmail-sync/SETUP.md` (a Google Cloud OAuth app and a
   wp-config.php encryption key are both required before it does anything).
+- **Portal** — a standalone branded page at `/crm/`, styled to the
+  brokerage's own colors and type instead of default WordPress admin
+  chrome. Active as soon as the plugin loads; no setup required. See
+  "The branded portal" below.
+
+## The branded portal
+
+`https://yoursite.com/crm/` is a second, standalone presentation of the
+same CRM — same data, same accounts, same permissions — with no
+WordPress admin bar, no wp-admin menu, no theme header/footer. It
+renders its own `<!DOCTYPE html>` and loads only its own stylesheet, so
+nothing in the theme or another plugin can visually collide with it.
+
+- Visiting `/crm/` while logged out redirects to the normal WordPress
+  login screen and bounces back afterward — there's no separate login
+  system to secure.
+- Every read is scoped exactly like the wp-admin screens
+  (`cornerstone_crm_manage_all` = see everyone, otherwise only your own),
+  and every write goes through the same data-layer classes, so the two
+  presentations can never disagree about who can see or edit what.
+- The wp-admin **Cornerstone CRM** menu still works as before — the
+  portal is additive, not a replacement. Each links to the other (an
+  "Open the branded portal ↗" link in wp-admin; a "wp-admin ↗" link in
+  the portal header, shown to brokers only, since that's currently where
+  Gmail Sync's settings live).
+- Uses a rewrite rule (`/crm/...`), not just a query string, so it reads
+  as a real URL. If it 404s right after first deploying this version,
+  visit **Settings → Permalinks** and click **Save Changes** once to
+  force a rewrite flush — this should self-heal within one page load on
+  its own, but that's the manual fallback.
 
 ## File structure
 
@@ -82,6 +112,14 @@ cornerstone-crm/
 │           ├── class-gmail-admin.php         Settings + connection status screen
 │           ├── views/gmail-sync.php
 │           └── SETUP.md              Required external setup (Google Cloud, encryption key)
+│       └── portal/                   Optional: standalone branded page at /crm/
+│           ├── module.php                    Bootstrap, registered via the extension hook
+│           ├── class-portal-router.php        Rewrite rules, auth gate, dispatch, url() helper
+│           ├── class-portal-controller.php    Resolves section/view/id → data → view template
+│           ├── class-portal-forms.php         admin-post handlers (save/delete), reuse core data layer
+│           ├── class-portal-views.php         Document shell (header/nav/footer), notices, pagination
+│           ├── views/                         contacts.php, interactions.php, transactions.php, tasks.php
+│           └── assets/portal.css              Brand token system + component styles
 ├── admin/
 │   ├── css/admin.css
 │   └── views/                       Server-rendered list/form templates

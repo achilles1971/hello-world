@@ -48,15 +48,7 @@ final class Cornerstone_Gmail_Admin {
 		$can_manage_all = Cornerstone_Roles::can_manage_all();
 		$current_user_id = get_current_user_id();
 
-		if ( $can_manage_all ) {
-			$users = get_users( [
-				'role__in' => [ Cornerstone_Roles::ROLE_BROKER, Cornerstone_Roles::ROLE_AGENT, 'administrator' ],
-				'orderby'  => 'display_name',
-				'order'    => 'ASC',
-			] );
-		} else {
-			$users = [ wp_get_current_user() ];
-		}
+		$users = $can_manage_all ? Cornerstone_Roles::crm_users() : [ wp_get_current_user() ];
 
 		$rows = [];
 		foreach ( $users as $user ) {

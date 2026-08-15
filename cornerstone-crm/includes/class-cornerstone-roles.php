@@ -119,4 +119,21 @@ final class Cornerstone_Roles {
 		}
 		return user_can( $user_id, $cap );
 	}
+
+	/**
+	 * Every WordPress user holding any Cornerstone capability (broker,
+	 * agent, or an administrator with inherited access), ordered by
+	 * display name. Shared by both the wp-admin UI and the portal for
+	 * their "Agent" filter/owner lookups, so the two presentation layers
+	 * can't drift on who counts as a CRM user.
+	 *
+	 * @return WP_User[]
+	 */
+	public static function crm_users(): array {
+		return get_users( [
+			'role__in' => [ self::ROLE_BROKER, self::ROLE_AGENT, 'administrator' ],
+			'orderby'  => 'display_name',
+			'order'    => 'ASC',
+		] );
+	}
 }

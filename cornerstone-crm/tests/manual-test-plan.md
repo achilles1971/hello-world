@@ -208,6 +208,40 @@ Google API in the build environment.
       `last_synced_at`-driven "Last Synced" times advance roughly every
       20 minutes without manually clicking Sync Now.
 
+## 9. Branded portal (`/crm/`)
+
+- [ ] Log out entirely, visit `/crm/`. Confirm you land on the normal
+      WordPress login screen, and that logging in sends you back to
+      `/crm/` rather than wp-admin.
+- [ ] If `/crm/` 404s the first time after deploying this version,
+      visit **Settings → Permalinks** and click **Save Changes** once,
+      then try again — the rewrite rule is meant to self-register on the
+      next page load, this is the manual fallback if it doesn't.
+- [ ] Confirm the page shows no WordPress admin bar, no wp-admin sidebar,
+      and doesn't visually resemble the site's theme — it should look
+      like its own branded page (navy/blue/gold, not default WordPress
+      grey).
+- [ ] Click through all four nav tabs (Contacts, Interactions,
+      Transactions, Tasks). Confirm the active tab is visually marked.
+- [ ] Create, edit, filter, and delete a record in each of the four
+      sections from the portal — same checks as sections 1–4 above, just
+      through `/crm/` instead of wp-admin.
+- [ ] From the Contacts list, click **+ Task** on a row — confirm it
+      lands on the portal's new-task form with that contact pre-selected.
+- [ ] As agent, confirm the portal shows only your own records — same
+      scoping test as section 5, run through `/crm/` this time. As
+      broker, confirm you see everyone's, plus the Agent column/filter
+      on Contacts.
+- [ ] As agent, log in and confirm there's no "wp-admin ↗" link in the
+      portal header (broker-only). As broker, confirm the link is there
+      and goes to the wp-admin Cornerstone CRM screen.
+- [ ] From wp-admin, confirm the "Open the branded portal ↗" link under
+      the tab bar goes to the matching `/crm/` section.
+- [ ] Try submitting a portal form (e.g. delete a contact) with a stale
+      or missing nonce (e.g. by reloading an old cached form page after
+      logging out and back in as someone else) — confirm it's rejected,
+      not silently processed.
+
 ## Known gaps in this pass
 
 - No automated PHPUnit test suite ships with this version — WordPress's

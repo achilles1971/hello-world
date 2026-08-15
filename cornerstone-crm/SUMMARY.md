@@ -124,6 +124,31 @@ whole plugin:
     this environment, for the same reason as the rest of this plugin: no
     live WordPress instance or Google credentials available here. Test
     against a real connected account before relying on it.
+- **Branded portal module** (`includes/modules/portal/`) at `/crm/` — a
+  standalone, brand-styled presentation of the CRM outside wp-admin
+  entirely, per your request to move away from default WordPress
+  styling. I couldn't fetch your live site from this environment (its
+  domain is blocked by this sandbox's network policy) to match it
+  pixel-for-pixel, so per your call this uses the brand palette (navy
+  `#1B2A4A`, blue `#2E75B6`, gold `#C9A84C`) with a considered but
+  independently-chosen type pairing (Fraunces for headings, Figtree for
+  body) rather than copying the live site's exact layout. Worth a look
+  before relying on it to confirm the direction lands the way you want.
+  - Same data, same accounts, same permission rules as wp-admin — this
+    is a second view of the same CRM, not a second system. Every read
+    and write goes through the exact same scoped data-layer calls.
+  - No custom login form — logged-out visits redirect to WordPress's own
+    login and bounce back, so there's no separate auth surface to secure.
+  - Renders its own document shell and doesn't call `wp_head()`/
+    `wp_footer()`, so no theme CSS or unrelated plugin scripts can
+    collide with the branded look — also means it doesn't show the
+    WordPress admin bar by design.
+  - Gmail Sync's settings screen stays in wp-admin only for this pass
+    (it's a broker-only technical/credentials screen); the portal links
+    out to wp-admin for that rather than duplicating it.
+  - Like everything else in this plugin, not yet visually verified in an
+    actual browser — no live WordPress instance available here to render
+    it against.
 
 ## Known limitations / risks
 

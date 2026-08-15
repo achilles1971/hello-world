@@ -163,20 +163,12 @@ final class Cornerstone_Admin {
 	}
 
 	/**
-	 * All WordPress users holding any Cornerstone capability (broker,
-	 * agent, or an administrator who inherited access), for the broker's
-	 * "Agent" filter dropdown. Ordered by display name.
+	 * Every CRM user (see Cornerstone_Roles::crm_users()), for the
+	 * broker's "Agent" filter dropdown. Ordered by display name.
 	 */
 	private static function crm_user_choices(): array {
-		$users = get_users( [
-			'role__in' => [ Cornerstone_Roles::ROLE_BROKER, Cornerstone_Roles::ROLE_AGENT, 'administrator' ],
-			'orderby'  => 'display_name',
-			'order'    => 'ASC',
-			'fields'   => [ 'ID', 'display_name' ],
-		] );
-
 		$choices = [];
-		foreach ( $users as $user ) {
+		foreach ( Cornerstone_Roles::crm_users() as $user ) {
 			$choices[ (int) $user->ID ] = $user->display_name;
 		}
 		return $choices;
@@ -539,6 +531,14 @@ final class Cornerstone_Admin {
 			);
 		}
 		echo '</h2>';
+
+		/**
+		 * Lets a module print something after the tab bar — e.g. Gmail
+		 * Sync's "Open Portal" link — without editing this file. Same
+		 * extension pattern as the cornerstone_crm_admin_nav_tabs filter
+		 * above, as an action instead since this is output, not data.
+		 */
+		do_action( 'cornerstone_crm_admin_nav_after', $active );
 	}
 
 	/**

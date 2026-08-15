@@ -60,6 +60,11 @@ add_action( 'cornerstone_crm_register_modules', function () {
 	Cornerstone_Gmail_Module::init();
 } );
 
+add_action( 'cornerstone_crm_register_modules', function () {
+	require_once CORNERSTONE_CRM_PATH . 'includes/modules/portal/module.php';
+	Cornerstone_Portal_Module::init();
+} );
+
 // ---------------------------------------------------------------------------
 // Activation / Deactivation
 // ---------------------------------------------------------------------------
