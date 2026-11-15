@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SOP Knowledge Base</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #ffffff; --text: #1d1d1b; --muted: #6b6b66;
+    --line: #e2e1dc; --accent: #2f5d8a; --accent-soft: #e8eff6;
+    --warn: #8a5a00; --warn-soft: #fbf1dc; --bad: #8a2f2f; --bad-soft: #f8e6e6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161615; --panel: #1f1f1d; --text: #ecebe6; --muted: #9a9993;
+      --line: #33332f; --accent: #8db6dd; --accent-soft: #22303c;
+      --warn: #e6b45c; --warn-soft: #3a2f1a; --bad: #e59393; --bad-soft: #3a2222;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.35rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; font-size: .95rem; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; padding: 12px 14px; font: inherit; color: var(--text);
+          background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+  input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  button { padding: 0 18px; font: inherit; font-weight: 600; border: 0; border-radius: 8px;
+           background: var(--accent); color: var(--bg); cursor: pointer; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .tabs { display: flex; gap: 16px; margin: 24px 0 12px; font-size: .9rem; }
+  .tabs a { color: var(--muted); text-decoration: none; cursor: pointer; }
+  .tabs a.on { color: var(--text); font-weight: 600; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; }
+  .answer { white-space: pre-wrap; }
+  .answer sup { color: var(--accent); font-weight: 600; cursor: pointer; }
+  .note { font-size: .85rem; padding: 6px 10px; border-radius: 6px; margin-bottom: 12px;
+          background: var(--warn-soft); color: var(--warn); }
+  .notfound { background: var(--bad-soft); color: var(--bad); }
+  .cites { margin-top: 18px; display: grid; gap: 10px; }
+  .cite { border-left: 3px solid var(--accent); background: var(--accent-soft);
+          padding: 10px 12px; border-radius: 0 6px 6px 0; }
+  .cite.flash { outline: 2px solid var(--accent); }
+  .cite q { display: block; font-style: italic; quotes: "\201C" "\201D"; }
+  .meta { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+  .meta a { color: var(--accent); }
+  .badge { display: inline-block; font-size: .72rem; padding: 1px 6px; border-radius: 4px;
+           background: var(--warn-soft); color: var(--warn); margin-left: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  td, th { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 500; }
+  .empty { color: var(--muted); }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .examples span { font-size: .85rem; padding: 4px 10px; border: 1px solid var(--line);
+                   border-radius: 999px; cursor: pointer; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1>SOP Knowledge Base</h1>
+  <p class="sub">Ask about policies, checklists, or onboarding. Every answer quotes the internal doc it came from.</p>
+  <form id="f">
+    <input id="q" placeholder="e.g. How soon do I have to turn in signed contracts?" autocomplete="off" autofocus>
+    <button id="go">Ask</button>
+  </form>
+  <div class="examples" id="ex"></div>
+
+  <div class="tabs">
+    <a data-tab="ask" class="on">Answer</a>
+    <a data-tab="library">Library</a>
+    <a data-tab="gaps">Unanswered questions</a>
+  </div>
+  <section id="out"></section>
+</main>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const out = $("#out");
+let tab = "ask", last = null;
+
+["How do I submit an expense for reimbursement?",
+ "What do I do my first week?",
+ "When is commission paid after closing?",
+ "What's the dress code?"].forEach(t => {
+  const s = document.createElement("span"); s.textContent = t;
+  s.onclick = () => { $("#q").value = t; $("#f").requestSubmit(); };
+  $("#ex").append(s);
+});
+
+document.querySelectorAll(".tabs a").forEach(a => a.onclick = () => show(a.dataset.tab));
+
+async function show(t) {
+  tab = t;
+  document.querySelectorAll(".tabs a").forEach(a => a.classList.toggle("on", a.dataset.tab === t));
+  if (t === "ask") return render(last);
+  out.innerHTML = '<div class="card empty">Loading…</div>';
+  const rows = await (await fetch(t === "library" ? "/api/library" : "/api/gaps")).json();
+  if (t === "library") {
+    out.innerHTML = `<div class="card"><table><tr><th>Document</th><th>Owner</th><th>Verified</th></tr>${
+      rows.map(r => `<tr><td><a href="/doc/${encodeURI(r.path)}" target="_blank">${esc(r.title)}</a></td>
+        <td>${esc(r.owner || "—")}</td>
+        <td>${esc(r.verified || "never")}${r.stale ? '<span class="badge">re-verify</span>' : ""}</td></tr>`).join("")
+    }</table></div>`;
+  } else {
+    out.innerHTML = rows.length
+      ? `<div class="card"><table><tr><th>Question</th><th>When</th></tr>${
+          rows.slice().reverse().map(r => `<tr><td>${esc(r.question)}</td><td>${esc(r.at.replace("T"," "))}</td></tr>`).join("")
+        }</table></div>`
+      : '<div class="card empty">No unanswered questions logged yet.</div>';
+  }
+}
+
+function render(a) {
+  if (!a) { out.innerHTML = ""; return; }
+  const body = esc(a.answer).replace(/\[(\d+)\]/g, '<sup data-n="$1">[$1]</sup>');
+  out.innerHTML = `<div class="card">
+    ${a.note ? `<div class="note">${esc(a.note)}</div>` : ""}
+    ${!a.found ? `<div class="note notfound">Not covered by the internal docs. Logged so someone can write it up.</div>` : ""}
+    <div class="answer">${body}</div>
+    ${a.citations.length ? `<div class="cites">${a.citations.map(c => `
+      <div class="cite" id="c${c.number}">
+        <q>${esc(c.cited_text)}</q>
+        <div class="meta">[${c.number}] <a href="/doc/${encodeURI(c.doc_path)}" target="_blank">${esc(c.heading)}</a>
+          · owner: ${esc(c.owner || "unassigned")} · verified: ${esc(c.verified || "never")}
+          ${c.stale ? '<span class="badge">may be out of date</span>' : ""}</div>
+      </div>`).join("")}</div>` : ""}
+  </div>`;
+  out.querySelectorAll("sup").forEach(s => s.onclick = () => {
+    const el = $("#c" + s.dataset.n); if (!el) return;
+    el.scrollIntoView({behavior: "smooth", block: "center"});
+    el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 1200);
+  });
+}
+
+$("#f").onsubmit = async e => {
+  e.preventDefault();
+  const q = $("#q").value.trim(); if (!q) return;
+  $("#go").disabled = true; tab = "ask"; show("ask");
+  out.innerHTML = '<div class="card empty">Searching the docs…</div>';
+  try {
+    const r = await fetch("/api/ask", {method: "POST", headers: {"Content-Type": "application/json"},
+                                       body: JSON.stringify({question: q})});
+    if (!r.ok) throw new Error(await r.text());
+    last = await r.json(); render(last);
+  } catch (err) {
+    out.innerHTML = `<div class="card note notfound">Error: ${esc(err.message)}</div>`;
+  } finally { $("#go").disabled = false; }
+};
+</script>
+</body>
+</html>
