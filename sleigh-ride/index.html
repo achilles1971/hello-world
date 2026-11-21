@@ -1,0 +1,946 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Christmas Sleigh Ride</title>
+<meta name="description" content="Take the reins! Race your sleigh through a snowy Frankfort street, dodge snowmen and collect house keys. A Christmas game from Aaron Atkinson Realty.">
+<meta property="og:title" content="Christmas Sleigh Ride · Aaron Atkinson Realty">
+<meta property="og:description" content="Take the reins, dodge the snowmen, collect the keys. Every play gives to our local food pantry.">
+<meta name="theme-color" content="#0F182A">
+<link rel="icon" href="logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap">
+<style>
+:root{
+  --navy:#0F182A; --navy-2:#162238; --navy-3:#1D2D48; --line:#26395C;
+  --green:#05B58D; --gold:#FFDE59; --ink:#FFFFFF; --dim:#A9BCD0; --bad:#FF9A9A;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--navy);color:var(--ink);font-family:Outfit,system-ui,-apple-system,Segoe UI,sans-serif;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;overscroll-behavior:none}
+.app{position:fixed;inset:0}
+.stage{position:absolute;inset:0}
+.stage canvas{position:absolute;inset:0;width:100%!important;height:100%!important;display:block;touch-action:none;outline:none}
+
+/* HUD floats over the 3D view */
+.hud{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:8px;
+  padding:calc(env(safe-area-inset-top) + 10px) calc(env(safe-area-inset-right) + 12px) 10px calc(env(safe-area-inset-left) + 12px);
+  background:linear-gradient(rgba(15,24,42,.75),rgba(15,24,42,0));pointer-events:none}
+.hud > *{pointer-events:auto}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.brand img{width:34px;height:auto;display:block}
+.brand b{font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 6px rgba(0,0,0,.4)}
+.stats{margin-left:auto;display:flex;gap:6px;align-items:center;flex:0 0 auto}
+.pill{display:flex;align-items:center;gap:6px;height:36px;padding:0 11px;border-radius:999px;background:rgba(22,34,56,.85);border:1px solid var(--line);
+  font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;transition:color .2s,border-color .2s}
+.pill small{font-weight:600;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.pill.low{color:var(--bad);border-color:#7A2B36}
+.pill.bump{animation:bump .28s ease-out}
+.hearts{letter-spacing:1px;font-size:15px}
+.hearts i{font-style:normal;transition:opacity .2s,filter .2s}
+.hearts i.gone{opacity:.25;filter:grayscale(1)}
+@keyframes bump{40%{transform:scale(1.2)}}
+.icon{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(22,34,56,.85);color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}
+.icon:focus-visible,.btn:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+@media (max-width:460px){.brand b{display:none}.pill small{display:none}}
+
+.hint{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom) + 9%);transform:translateX(-50%);z-index:3;pointer-events:none;text-align:center;
+  padding:12px 20px;border-radius:18px;background:rgba(15,24,42,.88);font-weight:600;font-size:16px;line-height:1.35;
+  box-shadow:0 8px 24px rgba(15,24,42,.35);transition:opacity .3s,transform .3s;max-width:calc(100% - 32px)}
+.hint small{display:block;color:var(--dim);font-weight:500;font-size:14px}
+.hint.off{opacity:0;transform:translate(-50%,10px)}
+.flash{position:absolute;inset:0;z-index:2;pointer-events:none;background:radial-gradient(ellipse at center,rgba(226,56,77,0) 35%,rgba(226,56,77,.55));opacity:0}
+.flash.go{animation:flash .5s ease-out}
+@keyframes flash{0%{opacity:1}100%{opacity:0}}
+.toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);z-index:3;pointer-events:none;font-weight:800;font-size:28px;color:var(--gold);
+  text-shadow:0 2px 0 #0F182A,0 4px 18px rgba(0,0,0,.4);opacity:0;white-space:nowrap}
+.toast.go{animation:toast 1.1s ease-out}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,10px) scale(.9)}15%{opacity:1;transform:translate(-50%,0) scale(1.05)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}
+
+/* Overlays */
+.overlay{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:16px;
+  background:rgba(15,24,42,.55);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);animation:fade .25s ease-out}
+.overlay[hidden]{display:none}
+@keyframes fade{from{opacity:0}}
+.card{width:100%;max-width:420px;max-height:100%;overflow:auto;background:var(--navy-2);border:1px solid var(--line);border-radius:22px;
+  padding:24px 22px 22px;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.45);animation:rise .35s cubic-bezier(.2,1.2,.4,1)}
+@keyframes rise{from{transform:translateY(16px) scale(.97);opacity:0}}
+.card .logo{width:76px;height:auto;margin:0 auto 10px;display:block;padding:8px;border-radius:18px;background:#0F182A;box-shadow:0 0 0 1px var(--line)}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--green)}
+.card h1,.card h2{margin:6px 0 10px;font-weight:800;line-height:1.05}
+.card h1{font-size:34px}.card h2{font-size:30px}
+.card p{margin:0 0 14px;color:var(--dim);font-size:16px;line-height:1.5}
+.card p b{color:var(--ink)}
+.btn{appearance:none;border:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:54px;padding:0 24px;
+  border-radius:999px;background:var(--green);color:var(--navy);font:800 18px/1 Outfit,system-ui,sans-serif;box-shadow:0 10px 26px rgba(5,181,141,.32);transition:transform .1s,background .15s;text-decoration:none}
+.btn:hover{background:#0BC79C}.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.6;cursor:wait}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none;min-height:48px;font-size:16px}
+.btn.ghost:hover{background:rgba(255,255,255,.06)}
+.row{display:flex;gap:10px;margin-top:10px}.row > *{flex:1}
+.charity{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:12px 14px;border-radius:14px;background:rgba(255,222,89,.09);border:1px solid rgba(255,222,89,.35);text-align:left;font-size:14px;color:var(--dim);line-height:1.4}
+.charity b{color:var(--gold)}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 18px;font-size:13px;color:var(--dim);text-align:left}
+.controls div{padding:10px 12px;border-radius:12px;background:var(--navy-3)}
+.controls b{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}
+.score{display:flex;align-items:center;justify-content:center;gap:12px;margin:6px 0 2px}
+.score b{font-size:64px;font-weight:800;line-height:1;color:var(--gold);font-variant-numeric:tabular-nums}
+.score svg{width:46px;height:46px}
+.score-lab{font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.best{display:inline-block;margin:0 0 16px;padding:5px 12px;border-radius:999px;background:var(--navy-3);font-size:14px;font-weight:600}
+.best.new{background:var(--gold);color:var(--navy);animation:bump .5s .3s}
+.lead{margin:18px 0 4px;padding-top:18px;border-top:1px solid var(--line);text-align:left}
+.lead h3{margin:0 0 4px;font-size:18px}
+.lead p{font-size:14px;margin-bottom:12px}
+.lead input[type=email],.lead input[type=text]{width:100%;height:48px;padding:0 14px;margin-bottom:10px;border-radius:12px;border:1px solid var(--line);background:var(--navy);color:var(--ink);font:500 16px Outfit,system-ui,sans-serif;-webkit-user-select:text;user-select:text}
+.lead input:focus{outline:2px solid var(--green);border-color:transparent}
+.lead label.check{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--dim);margin:2px 0 14px;line-height:1.4;cursor:pointer}
+.lead label.check input{margin-top:2px;width:18px;height:18px;accent-color:var(--green);flex:0 0 auto}
+.lead .msg{font-size:14px;margin:10px 0 0;min-height:1em}
+.lead .msg.bad{color:var(--bad)}
+.signoff{margin:16px 0 0;font-size:13px;color:var(--dim)}
+.loading{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:var(--navy);color:var(--dim);font-size:15px;text-align:center;padding:24px}
+.loading[hidden]{display:none}
+.loading img{width:64px;animation:bob 1.2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-height:640px){.card{padding:16px 18px}.card .logo{width:52px}.card h1{font-size:28px}.score b{font-size:52px}.controls{margin-bottom:12px}}
+@media (prefers-reduced-motion:reduce){.loading img{animation:none}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="stage" data-stage></div>
+
+  <header class="hud">
+    <div class="brand"><img src="logo.png" alt="" width="34" height="30"><b data-brand></b></div>
+    <div class="stats">
+      <div class="pill hearts" data-hearts aria-label="Lives"></div>
+      <div class="pill" data-keys-pill aria-label="Keys collected"><small>Keys</small><span data-keys>0</span></div>
+      <div class="pill" data-time-pill aria-label="Time left"><small>Time</small><span data-time>60</span></div>
+      <button class="icon" type="button" data-mute aria-label="Mute sound"></button>
+    </div>
+  </header>
+
+  <div class="flash" data-flash></div>
+  <div class="toast" data-toast></div>
+  <div class="hint off" data-hint></div>
+
+  <div class="overlay" data-start>
+    <div class="card">
+      <img class="logo" src="logo.png" alt="" width="76" height="66">
+      <div class="eyebrow">Christmas Sleigh Ride</div>
+      <h1>Take the reins!</h1>
+      <p>Race the sleigh down a snowy street and grab as many house keys as you can in <b data-round>60</b> seconds. Dodge the snowmen and fly over the snowbanks.</p>
+      <div class="controls" data-controls></div>
+      <div class="charity" data-charity><span aria-hidden="true">🎁</span><span data-charity-text></span></div>
+      <button class="btn" type="button" data-play>Start the sleigh</button>
+    </div>
+  </div>
+
+  <div class="overlay" data-over hidden>
+    <div class="card">
+      <div class="eyebrow" data-over-eyebrow>Ride complete</div>
+      <h2 data-over-title>What a ride!</h2>
+      <div class="score">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><g transform="rotate(-25 24 24)"><path d="M6 26v-9l8-7 8 7v9z" fill="#F2B544" stroke="#C98D1E" stroke-width="1.5"/><rect x="12" y="19" width="4" height="7" fill="#0F182A" opacity=".8"/><rect x="21" y="20" width="22" height="5" rx="2.5" fill="#F2B544" stroke="#C98D1E" stroke-width="1.5"/><rect x="33" y="24" width="3.5" height="6" fill="#F2B544"/><rect x="38.5" y="24" width="3.5" height="4" fill="#F2B544"/></g></svg>
+        <b data-final>0</b>
+      </div>
+      <div class="score-lab">keys collected</div>
+      <div class="best" data-best></div>
+      <button class="btn" type="button" data-again>Ride again</button>
+      <div class="row"><button class="btn ghost" type="button" data-share>Share with a friend</button></div>
+      <div class="charity" data-charity style="margin-top:16px"><span aria-hidden="true">❤️</span><span data-charity-thanks></span></div>
+      <form class="lead" data-lead hidden novalidate>
+        <h3>Want Frankfort market updates?</h3>
+        <p>Get Aaron's local market updates and new listings. No spam, unsubscribe anytime.</p>
+        <input type="text" name="name" placeholder="First name (optional)" autocomplete="given-name">
+        <input type="email" name="email" placeholder="you@example.com" autocomplete="email" required>
+        <label class="check"><input type="checkbox" name="consent" required> <span>Yes, send me market updates from <span data-brand></span>.</span></label>
+        <button class="btn" type="submit">Sign me up</button>
+        <p class="msg" data-lead-msg role="status"></p>
+      </form>
+      <div class="row" data-contact hidden></div>
+      <p class="signoff" data-signoff></p>
+    </div>
+  </div>
+
+  <div class="loading" data-loading><img src="logo.png" alt=""><span data-loading-text>Hitching up the reindeer…</span></div>
+  <p class="sr-only" aria-live="polite" data-live></p>
+</div>
+
+<script>
+  // If the 3D engine can't load (offline, very old browser), say so instead of hanging.
+  setTimeout(function () {
+    if (!window.__sleighReady) {
+      var t = document.querySelector('[data-loading-text]');
+      if (t) t.textContent = 'The sleigh couldn’t start on this browser. Please check your connection, or try Chrome or Safari.';
+    }
+  }, 12000);
+</script>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.min.js';
+
+/* ================================================================
+ * SETTINGS: edit these to rebrand or tune the game.
+ * ================================================================ */
+const CONFIG = {
+  brand: 'Aaron Atkinson Realty',
+  town: 'Frankfort',
+  roundSeconds: 60,
+  lives: 3,
+
+  // Charity line. Set to null to hide it everywhere.
+  charity: { perPlay: '$1', name: 'our local food pantry' },
+
+  // Where the end-screen sign-up form sends leads (JSON POST): Formspree, Make/Zapier webhook, etc.
+  // Leave '' to hide the form.
+  leadEndpoint: '',
+  // Optional URL pinged once per play (to count plays / donations).
+  playEndpoint: '',
+  // End-screen contact buttons. Leave '' to hide.
+  phone: '',
+  website: '',
+
+  signoff: 'Merry Christmas from Aaron Atkinson Realty. Thank you for a great year, Frankfort!',
+
+  // Feel / difficulty
+  startSpeed: 15,   // metres per second
+  maxSpeed: 31,
+  accel: 0.32,      // speed gained per second
+};
+
+/* ---------------- helpers ---------------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => [...(r || document).querySelectorAll(s)];
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const touchFirst = matchMedia('(pointer: coarse)').matches;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('sleighride:' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('sleighride:' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
+};
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[(Math.random() * a.length) | 0];
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { /* ignore */ } };
+function ping(url, data) {
+  if (!url) return;
+  try {
+    const body = JSON.stringify(data);
+    if (navigator.sendBeacon && navigator.sendBeacon(url, new Blob([body], { type: 'text/plain' }))) return;
+    fetch(url, { method: 'POST', body, keepalive: true, mode: 'no-cors' });
+  } catch (e) { /* ignore */ }
+}
+
+/* ---------------- sound: tiny Web Audio synth, no files ---------------- */
+const Sound = (() => {
+  let ac = null, muted = store.get('muted', false);
+  const unlock = () => {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; } }
+    if (ac.state === 'suspended') ac.resume();
+  };
+  function tone(f, at, dur, type, vol, slide) {
+    if (!ac || muted) return;
+    const t0 = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t0);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t0 + dur);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol || 0.15, t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t0); o.stop(t0 + dur + 0.03);
+  }
+  return {
+    unlock,
+    isMuted: () => muted,
+    toggle() { muted = !muted; store.set('muted', muted); return muted; },
+    key(n) { const f = 784 * Math.pow(2, (n % 8) / 12); tone(f, 0, 0.14, 'sine', 0.2); tone(f * 1.5, 0.06, 0.2, 'sine', 0.14); tone(f * 3, 0.06, 0.12, 'sine', 0.04); },
+    bell() { const f = pick([2349, 2637, 3136]); tone(f, 0, 0.18, 'triangle', 0.025); tone(f * 2.01, 0, 0.1, 'sine', 0.01); },
+    swish() { tone(500, 0, 0.09, 'triangle', 0.04, 900); },
+    jump() { tone(300, 0, 0.3, 'triangle', 0.08, 900); },
+    hit() { tone(180, 0, 0.4, 'sawtooth', 0.12, 50); tone(90, 0, 0.3, 'square', 0.06, 40); },
+    tick() { tone(1200, 0, 0.04, 'square', 0.03); },
+    end() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.11, 0.28, 'triangle', 0.12)); },
+  };
+})();
+
+/* ---------------- DOM wiring ---------------- */
+const stageEl = $('[data-stage]'), hintEl = $('[data-hint]'), keysEl = $('[data-keys]'), timeEl = $('[data-time]');
+const keysPill = $('[data-keys-pill]'), timePill = $('[data-time-pill]'), heartsEl = $('[data-hearts]'), muteBtn = $('[data-mute]');
+const startOv = $('[data-start]'), overOv = $('[data-over]'), live = $('[data-live]'), flashEl = $('[data-flash]'), toastEl = $('[data-toast]');
+
+$$('[data-brand]').forEach(el => { el.textContent = CONFIG.brand; });
+$('[data-round]').textContent = CONFIG.roundSeconds;
+timeEl.textContent = CONFIG.roundSeconds;
+$('[data-signoff]').textContent = CONFIG.signoff;
+if (CONFIG.charity) {
+  $('[data-charity-text]').innerHTML = `Every play gives <b>${CONFIG.charity.perPlay}</b> to ${CONFIG.charity.name}.`;
+  $('[data-charity-thanks]').innerHTML = `Thank you! Your ride just added <b>${CONFIG.charity.perPlay}</b> for ${CONFIG.charity.name}.`;
+} else $$('[data-charity]').forEach(el => { el.style.display = 'none'; });
+$('[data-controls]').innerHTML = touchFirst
+  ? '<div><b>👈 👉 Swipe</b>or tap left / right to change lanes</div><div><b>👆 Swipe up</b>to fly over snowbanks</div>'
+  : '<div><b>← → or A D</b>change lanes</div><div><b>↑ / W / Space</b>fly over snowbanks</div>';
+
+const ICON_ON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M19 5a10 10 0 010 14"/></svg>';
+const ICON_OFF = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
+const paintMute = () => { muteBtn.innerHTML = Sound.isMuted() ? ICON_OFF : ICON_ON; muteBtn.setAttribute('aria-label', Sound.isMuted() ? 'Unmute sound' : 'Mute sound'); };
+paintMute();
+muteBtn.addEventListener('click', () => { Sound.unlock(); Sound.toggle(); paintMute(); });
+function paintHearts(n) { heartsEl.innerHTML = Array.from({ length: CONFIG.lives }, (_, i) => `<i class="${i < n ? '' : 'gone'}">❤️</i>`).join(''); }
+function toast(text) { toastEl.textContent = text; toastEl.classList.remove('go'); void toastEl.offsetWidth; toastEl.classList.add('go'); }
+
+/* ================================================================
+ * 3D SCENE
+ * ================================================================ */
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, touchFirst ? 1.5 : 2));
+renderer.domElement.setAttribute('tabindex', '0');
+renderer.domElement.setAttribute('aria-label', 'Sleigh ride game. Use left and right to change lanes and up to jump.');
+stageEl.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const FOG = 0x31446B;
+scene.fog = new THREE.Fog(FOG, 28, 115);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 220);
+
+scene.add(new THREE.HemisphereLight(0xCFE0FF, 0x41507A, 2.2));
+const moon = new THREE.DirectionalLight(0xFFF0D8, 1.6); moon.position.set(6, 12, 8); scene.add(moon);
+
+function canvasTexture(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  t.userData.redraw = () => { draw(c.getContext('2d'), w, h); t.needsUpdate = true; };
+  return t;
+}
+const matCache = new Map();
+function M(color, extra) {
+  const k = color + JSON.stringify(extra || {});
+  if (!matCache.has(k)) matCache.set(k, new THREE.MeshLambertMaterial(Object.assign({ color }, extra || {})));
+  return matCache.get(k);
+}
+const mesh = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; };
+const S = (m, x, y = x, z = x) => { m.scale.set(x, y, z); return m; };
+
+// Sky
+scene.background = canvasTexture(4, 256, (c, w, h) => {
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#0B1222'); g.addColorStop(0.5, '#1D2D48'); g.addColorStop(1, '#3B5079');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+});
+// Stars on a big dome
+{
+  const n = 260, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const a = rand(-1.2, 1.2), e = rand(0.15, 1.2), r = 190;
+    pos[i * 3] = Math.sin(a) * Math.cos(e) * r; pos[i * 3 + 1] = Math.sin(e) * r * 0.6 + 10; pos[i * 3 + 2] = -Math.cos(a) * Math.cos(e) * r;
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xFFFFFF, size: 1.3, sizeAttenuation: false, fog: false, transparent: true, opacity: 0.8 })));
+}
+
+// Logo image for signs and banners
+// Embedded copy of logo.png, so textures drawn from it are never blocked as cross-origin.
+const logoImg = new Image(); logoImg.src = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHMAAABkCAYAAAC1kA/FAAAACXBIWXMAAC4jAAAuIwF4pT92AAAFyWlUWHRYTUw6Y29tLmFkb2JlLnhtcAAAAAAAPD94cGFja2V0IGJlZ2luPSLvu78iIGlkPSJXNU0wTXBDZWhpSHpyZVN6TlRjemtjOWQiPz4gPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyIgeDp4bXB0az0iQWRvYmUgWE1QIENvcmUgOS4xLWMwMDMgNzkuOTY5MGE4NywgMjAyNS8wMy8wNi0xOToxMjowMyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczpkYz0iaHR0cDovL3B1cmwub3JnL2RjL2VsZW1lbnRzLzEuMS8iIHhtbG5zOnBob3Rvc2hvcD0iaHR0cDovL25zLmFkb2JlLmNvbS9waG90b3Nob3AvMS4wLyIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0RXZ0PSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VFdmVudCMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDI2LjcgKFdpbmRvd3MpIiB4bXA6Q3JlYXRlRGF0ZT0iMjAyNS0wMy0yNFQxMDoxMTowMC0wNDowMCIgeG1wOk1vZGlmeURhdGU9IjIwMjUtMDUtMjlUMjE6MjM6MDEtMDQ6MDAiIHhtcDpNZXRhZGF0YURhdGU9IjIwMjUtMDUtMjlUMjE6MjM6MDEtMDQ6MDAiIGRjOmZvcm1hdD0iaW1hZ2UvcG5nIiBwaG90b3Nob3A6Q29sb3JNb2RlPSIzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjY3OWNhZGEzLWM3YjMtMmY0OC1iZGFmLTkxN2JlNGJiYjk5YSIgeG1wTU06RG9jdW1lbnRJRD0i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';
+const brandedTextures = [];
+
+const glowTex = canvasTexture(64, 64, (c, w) => {
+  const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2);
+  g.addColorStop(0, 'rgba(255,240,190,1)'); g.addColorStop(0.35, 'rgba(255,214,110,.55)'); g.addColorStop(1, 'rgba(255,214,110,0)');
+  c.fillStyle = g; c.fillRect(0, 0, w, w);
+});
+const glowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.8 });
+const keyGlowMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.45 });
+
+/* ---------- road and ground ---------- */
+const LANES = [-2.3, 0, 2.3];
+const ROAD_W = 8.2, TILE = 10;
+const roadTex = canvasTexture(256, 320, (c, w, h) => {
+  c.fillStyle = '#E9EFF7'; c.fillRect(0, 0, w, h);
+  for (let i = 0; i < 900; i++) { c.fillStyle = Math.random() < 0.5 ? 'rgba(170,190,215,.25)' : 'rgba(255,255,255,.9)'; c.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+  const px = x => w / 2 + x * (w / ROAD_W);
+  // sleigh tracks in each lane
+  c.strokeStyle = 'rgba(140,165,200,.45)'; c.lineWidth = 5;
+  LANES.forEach(l => [-0.42, 0.42].forEach(o => { c.beginPath(); c.moveTo(px(l + o), 0); c.lineTo(px(l + o), h); c.stroke(); }));
+  // faint lane dividers
+  c.strokeStyle = 'rgba(77,124,254,.25)'; c.lineWidth = 3; c.setLineDash([40, 40]);
+  [-1.15, 1.15].forEach(x => { c.beginPath(); c.moveTo(px(x), 0); c.lineTo(px(x), h); c.stroke(); });
+});
+roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping; roadTex.repeat.set(1, 300 / TILE);
+const road = mesh(new THREE.PlaneGeometry(ROAD_W, 300), new THREE.MeshLambertMaterial({ map: roadTex }), 0, 0, -130);
+road.rotation.x = -Math.PI / 2; scene.add(road);
+const ground = mesh(new THREE.PlaneGeometry(120, 300), M(0xDCE6F2), 0, -0.02, -130); ground.rotation.x = -Math.PI / 2; scene.add(ground);
+[-1, 1].forEach(s => {
+  const curb = mesh(new THREE.BoxGeometry(0.5, 0.25, 300), M(0xF7FAFF), s * (ROAD_W / 2 + 0.25), 0.12, -130); scene.add(curb);
+  const walk = mesh(new THREE.PlaneGeometry(1.6, 300), M(0xC4D2E2), s * (ROAD_W / 2 + 1.3), 0.01, -130); walk.rotation.x = -Math.PI / 2; scene.add(walk);
+});
+
+/* ---------- scenery that scrolls past (pooled and recycled) ---------- */
+const SPAN = 132;  // length of the recycled strip of scenery
+const scenery = [];
+const BRICKS = [0x8C4A36, 0x7A3B2E, 0x6E3631, 0x9A6A4A, 0x5E6B7A, 0xB9A58A, 0x41607A];
+const DOORS = [0x05B58D, 0x0F182A, 0xB81E33, 0x05B58D];
+const G = {
+  box: new THREE.BoxGeometry(1, 1, 1),
+  roof: (() => { const g = new THREE.ConeGeometry(Math.SQRT1_2, 1, 4, 1); g.rotateY(Math.PI / 4); g.translate(0, 0.5, 0); return g; })(),
+  win: new THREE.PlaneGeometry(0.9, 1.1),
+  cone: new THREE.ConeGeometry(1, 1, 8),
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 8),
+  sphere: new THREE.SphereGeometry(1, 16, 12),
+  torus: new THREE.TorusGeometry(0.28, 0.08, 6, 14),
+};
+const winMat = new THREE.MeshBasicMaterial({ color: 0xFFD36E });
+const roofMat = M(0xF5F8FC);
+
+function makeSign(sold) {
+  const tex = canvasTexture(256, 176, (c, w, h) => {
+    c.fillStyle = '#FFFFFF'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#0F182A'; c.fillRect(0, 0, w, 112);
+    if (logoImg.complete && logoImg.naturalWidth) c.drawImage(logoImg, 12, 18, 80, 70);
+    c.fillStyle = '#FFFFFF'; c.font = '800 25px Outfit, sans-serif'; c.textBaseline = 'middle';
+    c.fillText('AARON', 102, 34); c.fillText('ATKINSON', 102, 62);
+    c.fillStyle = '#05B58D'; c.font = '800 21px Outfit, sans-serif'; c.fillText('REALTY', 102, 89);
+    c.fillStyle = sold ? '#E2384D' : '#05B58D'; c.fillRect(0, 112, w, 64);
+    c.fillStyle = '#FFFFFF'; c.font = '800 38px Outfit, sans-serif'; c.textAlign = 'center';
+    c.fillText(sold ? 'SOLD!' : 'FOR SALE', w / 2, 146);
+  });
+  brandedTextures.push(tex);
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(0.12, 2.1, 0.12), M(0xF5F8FC), 0, 1.05, 0));
+  g.add(mesh(new THREE.BoxGeometry(1.5, 0.08, 0.08), M(0xF5F8FC), 0.6, 2.0, 0));
+  const board = mesh(new THREE.PlaneGeometry(1.25, 0.86), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide }), 0.75, 1.45, 0);
+  g.add(board);
+  return g;
+}
+const signPool = [makeSign(true), makeSign(false), makeSign(true), makeSign(false)];
+
+function buildHouse(side) {
+  const g = new THREE.Group(), body = mesh(G.box, M(pick(BRICKS))); g.add(body);
+  const roof = mesh(G.roof, roofMat); g.add(roof);
+  const chim = mesh(G.box, M(0x5A2F27)); g.add(chim);
+  const door = mesh(G.box, M(pick(DOORS))); g.add(door);
+  const wreath = mesh(G.torus, M(0x1E7A46)); g.add(wreath);
+  const wins = [0, 1, 2, 3].map(() => { const w = mesh(G.win, winMat); g.add(w); return w; });
+  const lights = new THREE.Group(); g.add(lights);   // string of coloured bulbs under the eaves
+  const bulbCols = [0xFF5A5A, 0xFFDE59, 0x05B58D, 0x6FA8FF];
+  for (let i = 0; i < 9; i++) lights.add(mesh(new THREE.SphereGeometry(0.09, 6, 4), new THREE.MeshBasicMaterial({ color: bulbCols[i % 4] })));
+  const obj = { kind: 'house', g, side, layout() {
+    const w = rand(6.5, 8), d = rand(6, 7.5), h = rand(3.4, 4.8), rh = rand(2.2, 3.1);
+    body.material = M(pick(BRICKS)); door.material = M(pick(DOORS));
+    body.scale.set(d, h, w); body.position.y = h / 2;
+    roof.scale.set(d * 1.12, rh, w * 1.12); roof.position.y = h;
+    chim.scale.set(0.6, 1.4, 0.6); chim.position.set(rand(-1, 1), h + rh * 0.55, rand(-w / 4, w / 4));
+    const face = -side * (d / 2 + 0.02);           // the wall that faces the road
+    door.scale.set(0.1, 1.9, 1.1); door.position.set(face, 0.95, 0);
+    wreath.position.set(face - side * 0.06, 1.55, 0); wreath.rotation.y = Math.PI / 2;
+    wins.forEach((m, i) => {
+      const up = i >= 2, zz = (i % 2 ? 1 : -1) * w * 0.28;
+      m.position.set(face - side * 0.01, up ? h * 0.72 : 1.25, zz); m.rotation.y = -side * Math.PI / 2;
+      m.visible = up ? h > 3.8 : true;
+    });
+    lights.children.forEach((b, i) => { b.position.set(face - side * 0.15, h - 0.12 + (i % 2) * -0.1, -w / 2 + (i + 0.5) * (w / 9)); });
+    g.position.x = side * (ROAD_W / 2 + 3.2 + d / 2 + rand(0, 1.2));
+    g.userData.signSlot = null;
+  } };
+  obj.layout();
+  scene.add(g); return obj;
+}
+function buildTree(side) {
+  const g = new THREE.Group();
+  g.add(S(mesh(G.cyl, M(0x5A3A24), 0, 0.5, 0), 0.18, 1, 0.18));
+  [[1.5, 1.6, 1.4], [1.15, 1.4, 2.3], [0.75, 1.2, 3.1]].forEach(([r, hh, y]) => { const c = mesh(G.cone, M(0x1F5B45), 0, y, 0); c.scale.set(r, hh, r); g.add(c); });
+  [[1.3, 0.45, 1.15], [0.95, 0.4, 2.0]].forEach(([r, hh, y]) => { const c = mesh(G.cone, roofMat, 0, y + 0.25, 0); c.scale.set(r * 0.9, hh, r * 0.9); g.add(c); });
+  const obj = { kind: 'tree', g, side, layout() { const s = rand(0.8, 1.25); g.scale.set(s, s, s); g.position.x = side * rand(ROAD_W / 2 + 2.2, ROAD_W / 2 + 3); } };
+  obj.layout(); scene.add(g); return obj;
+}
+function buildLamp(side) {
+  const g = new THREE.Group();
+  const post = mesh(G.cyl, M(0x1C2638), 0, 1.6, 0); post.scale.set(0.07, 3.2, 0.07); g.add(post);
+  const head = mesh(G.box, M(0x1C2638), 0, 3.3, 0); head.scale.set(0.35, 0.35, 0.35); g.add(head);
+  const bulb = mesh(new THREE.SphereGeometry(0.14, 8, 6), new THREE.MeshBasicMaterial({ color: 0xFFF1C2 }), 0, 3.25, 0); g.add(bulb);
+  const glow = new THREE.Sprite(glowMat); glow.scale.set(2.6, 2.6, 1); glow.position.set(0, 3.25, 0); g.add(glow);
+  // candy-cane stripe ribbon
+  const bow = mesh(G.torus, M(0xE2384D), 0, 2.6, 0); bow.scale.set(0.6, 0.6, 0.6); bow.rotation.y = Math.PI / 2; g.add(bow);
+  const obj = { kind: 'lamp', g, side, layout() { g.position.x = side * (ROAD_W / 2 + 0.75); } };
+  obj.layout(); scene.add(g); return obj;
+}
+
+[-1, 1].forEach(side => {
+  for (let i = 0; i < 12; i++) { const o = buildHouse(side); o.g.position.z = -i * (SPAN / 12) - (side > 0 ? 5 : 0); scenery.push(o); }
+  for (let i = 0; i < 8; i++) { const o = buildTree(side); o.g.position.z = -i * (SPAN / 8) - 7 - (side > 0 ? 3 : 0); scenery.push(o); }
+  for (let i = 0; i < 6; i++) { const o = buildLamp(side); o.g.position.z = -i * (SPAN / 6) - 2 - (side > 0 ? 11 : 0); scenery.push(o); }
+});
+// put a few branded yard signs in front of houses
+let signIdx = 0;
+function maybeSign(house) {
+  if (house.g.userData.signSlot) { house.g.remove(house.g.userData.signSlot); house.g.userData.signSlot = null; }
+  if (Math.random() < 0.38) {
+    const s = signPool[signIdx++ % signPool.length];
+    if (s.parent) s.parent.userData.signSlot = null, s.parent.remove(s);
+    const side = house.side, d = house.g.children[0].scale.x;
+    s.position.set(-side * (d / 2 + 1.6), 0, rand(-1.5, 1.5));
+    s.rotation.y = side > 0 ? 0.35 : Math.PI - 0.35;
+    house.g.add(s); house.g.userData.signSlot = s;
+  }
+}
+scenery.filter(o => o.kind === 'house').forEach(maybeSign);
+
+// Branded banner arch across the road, recycled every so often
+const bannerTex = canvasTexture(1024, 150, (c, w, h) => {
+  c.fillStyle = '#0F182A'; c.fillRect(0, 0, w, h);
+  c.strokeStyle = '#FFDE59'; c.lineWidth = 6; c.strokeRect(6, 6, w - 12, h - 12);
+  if (logoImg.complete && logoImg.naturalWidth) c.drawImage(logoImg, 28, 22, 122, 106);
+  c.textBaseline = 'middle'; c.fillStyle = '#FFDE59'; c.font = '700 34px Outfit, sans-serif'; c.fillText('Merry Christmas from', 172, 50);
+  c.fillStyle = '#FFFFFF'; c.font = '800 54px Outfit, sans-serif'; c.fillText(CONFIG.brand, 172, 100);
+});
+brandedTextures.push(bannerTex);
+const banner = new THREE.Group();
+[-1, 1].forEach(s => { const p = mesh(G.cyl, M(0xE2384D), s * (ROAD_W / 2 + 0.6), 3, 0); p.scale.set(0.12, 6, 0.12); banner.add(p); });
+const bannerBoard = mesh(new THREE.PlaneGeometry(9, 1.32), new THREE.MeshBasicMaterial({ map: bannerTex, side: THREE.DoubleSide }), 0, 5.6, 0); banner.add(bannerBoard);
+for (let i = 0; i < 14; i++) { const b = new THREE.Sprite(glowMat); b.scale.set(0.5, 0.5, 1); b.position.set(-4.4 + i * (8.8 / 13), 6.35, 0.05); banner.add(b); }
+banner.position.z = -60; scene.add(banner);
+logoImg.onload = () => brandedTextures.forEach(t => t.userData.redraw());
+if (document.fonts) document.fonts.ready.then(() => brandedTextures.forEach(t => t.userData.redraw()));
+
+/* ---------- falling snow ---------- */
+const SNOW_N = reduceMotion ? 0 : (touchFirst ? 500 : 900);
+const snowPos = new Float32Array(SNOW_N * 3);
+for (let i = 0; i < SNOW_N; i++) { snowPos[i * 3] = rand(-25, 25); snowPos[i * 3 + 1] = rand(0, 16); snowPos[i * 3 + 2] = rand(-70, 6); }
+const snowGeo = new THREE.BufferGeometry(); snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPos, 3));
+const flakeTex = canvasTexture(32, 32, (c, w) => { const g = c.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, w); });
+const snow = new THREE.Points(snowGeo, new THREE.PointsMaterial({ map: flakeTex, size: 0.16, transparent: true, depthWrite: false, opacity: 0.9 }));
+scene.add(snow);
+
+/* ---------- the player: driver's-seat view of the sleigh and reindeer ---------- */
+const rig = new THREE.Group(); scene.add(rig);
+rig.add(camera); camera.position.set(0, 2.75, 3.4);
+
+function buildReindeer(lead) {
+  const g = new THREE.Group(), fur = M(0x8B5A3C), dark = M(0x5C3A24), tan = M(0xD8BC92), white = M(0xF4EEE4);
+  const body = mesh(new THREE.CapsuleGeometry(0.3, 0.85, 4, 10), fur, 0, 1.15, 0); body.rotation.x = Math.PI / 2; g.add(body);
+  const rump = mesh(G.sphere, white, 0, 1.2, 0.62); rump.scale.set(0.16, 0.14, 0.08); g.add(rump);
+  const neck = mesh(new THREE.CylinderGeometry(0.12, 0.17, 0.62, 8), fur, 0, 1.55, -0.55); neck.rotation.x = -0.55; g.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 1.86, -0.78); g.add(head);
+  const skull = mesh(G.box, fur); skull.scale.set(0.27, 0.27, 0.42); head.add(skull);
+  head.add(S(mesh(G.sphere, lead ? new THREE.MeshBasicMaterial({ color: 0xFF2A2A }) : dark, 0, -0.03, -0.24), 0.075, 0.075, 0.075));
+  [-1, 1].forEach(s => {
+    const ear = mesh(G.box, fur, s * 0.17, 0.12, 0.05); ear.scale.set(0.16, 0.05, 0.08); ear.rotation.z = s * 0.4; head.add(ear);
+    const a1 = mesh(G.cyl, tan, s * 0.12, 0.34, 0.08); a1.scale.set(0.028, 0.48, 0.028); a1.rotation.z = -s * 0.45; head.add(a1);
+    const a2 = mesh(G.cyl, tan, s * 0.27, 0.5, 0.05); a2.scale.set(0.022, 0.26, 0.022); a2.rotation.z = -s * 1.1; head.add(a2);
+    const a3 = mesh(G.cyl, tan, s * 0.18, 0.56, -0.04); a3.scale.set(0.02, 0.2, 0.02); a3.rotation.x = 0.6; head.add(a3);
+  });
+  const collar = mesh(new THREE.TorusGeometry(0.17, 0.04, 6, 14), M(0xB81E33), 0, 1.5, -0.45); collar.rotation.x = Math.PI / 2 - 0.55; g.add(collar);
+  g.add(mesh(new THREE.SphereGeometry(0.06, 8, 6), M(0xF2B544, { emissive: 0x5A3A00 }), 0, 1.38, -0.58));
+  const legs = [];
+  [[-0.16, -0.42], [0.16, -0.42], [-0.16, 0.42], [0.16, 0.42]].forEach(([x, z], i) => {
+    const pivot = new THREE.Group(); pivot.position.set(x, 1.0, z);
+    const leg = mesh(G.box, i < 2 ? fur : dark, 0, -0.45, 0); leg.scale.set(0.09, 0.9, 0.09); pivot.add(leg);
+    const hoof = mesh(G.box, M(0x2A1A10), 0, -0.9, 0); hoof.scale.set(0.11, 0.08, 0.13); pivot.add(hoof);
+    g.add(pivot); legs.push(pivot);
+  });
+  g.userData = { legs, body, head, neckTop: new THREE.Vector3(0, 1.6, -0.6) };
+  return g;
+}
+const deer = [buildReindeer(false), buildReindeer(true)];
+deer[0].position.set(-0.62, 0, -2.2); deer[1].position.set(0.62, 0, -2.2);
+deer.forEach(d => { d.scale.setScalar(0.92); rig.add(d); });
+
+// Sleigh front (what the driver sees): red dash with gold trim and curled runners
+const sleigh = new THREE.Group(); rig.add(sleigh);
+const red = M(0xC8243A), gold = M(0xF2B544, { emissive: 0x4A3000 });
+sleigh.add(S(mesh(G.box, red, 0, 1.3, 1.75), 2.7, 0.5, 0.3));
+sleigh.add(S(mesh(G.box, gold, 0, 1.58, 1.75), 2.8, 0.08, 0.38));
+sleigh.add(S(mesh(G.box, gold, 0, 1.08, 1.6), 2.8, 0.06, 0.06));
+[-1, 1].forEach(s => {
+  const curl = mesh(new THREE.TorusGeometry(0.42, 0.06, 8, 20, Math.PI * 1.3), gold, s * 1.42, 1.25, 1.25); curl.rotation.y = Math.PI / 2; curl.rotation.z = 0.4; sleigh.add(curl);
+  const run = mesh(G.box, gold, s * 1.42, 0.85, 2.6); run.scale.set(0.07, 0.07, 2.5); sleigh.add(run);
+});
+// little logo badge on the dash
+const badgeTex = canvasTexture(128, 112, (c, w, h) => { c.fillStyle = '#0F182A'; c.fillRect(0, 0, w, h); if (logoImg.complete && logoImg.naturalWidth) c.drawImage(logoImg, 14, 10, 100, 87); });
+brandedTextures.push(badgeTex);
+sleigh.add(mesh(new THREE.PlaneGeometry(0.5, 0.44), new THREE.MeshBasicMaterial({ map: badgeTex }), 0, 1.32, 1.91));
+// mittens holding the reins
+const mittens = [-1, 1].map(s => { const m = mesh(G.sphere, M(s < 0 ? 0xC8243A : 0x05B58D), s * 0.5, 1.82, 1.95); m.scale.set(0.11, 0.1, 0.13); sleigh.add(m); return m; });
+const reinMat = new THREE.LineBasicMaterial({ color: 0x4A2616 });
+const reins = [0, 1].map(() => { const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()]); const l = new THREE.Line(geo, reinMat); rig.add(l); return l; });
+const tmpV = new THREE.Vector3();
+
+/* ---------- collectibles and obstacles (pooled) ---------- */
+const keyGeo = (() => {
+  const s = new THREE.Shape();
+  s.moveTo(-0.34, -0.22); s.lineTo(0.34, -0.22); s.lineTo(0.34, 0.1); s.lineTo(0, 0.4); s.lineTo(-0.34, 0.1); s.closePath();
+  const hole = new THREE.Path(); hole.moveTo(-0.08, -0.22); hole.lineTo(0.08, -0.22); hole.lineTo(0.08, 0.05); hole.lineTo(-0.08, 0.05); hole.closePath();
+  s.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(s, { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.03, bevelSegments: 1 });
+  g.translate(0, 0.3, -0.06); return g;
+})();
+const keyMat = new THREE.MeshLambertMaterial({ color: 0xF2B544, emissive: 0x7A5208 });
+function buildKey() {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(keyGeo, keyMat));
+  g.add(S(mesh(G.box, keyMat, 0, -0.35, 0), 0.13, 0.75, 0.12));
+  g.add(S(mesh(G.box, keyMat, 0.12, -0.55, 0), 0.14, 0.09, 0.1));
+  g.add(S(mesh(G.box, keyMat, 0.1, -0.7, 0), 0.1, 0.08, 0.1));
+  const glow = new THREE.Sprite(keyGlowMat); glow.scale.set(1.5, 1.5, 1); g.add(glow);
+  g.scale.setScalar(0.95);
+  return g;
+}
+function buildSnowman() {
+  const g = new THREE.Group(), w = M(0xF7FAFF), k = M(0x1A1F2B);
+  [[0.7, 0.62], [0.5, 1.5], [0.36, 2.15]].forEach(([r, y]) => { const s = mesh(G.sphere, w, 0, y, 0); s.scale.setScalar(r); g.add(s); });
+  const brim = mesh(G.cyl, k, 0, 2.47, 0); brim.scale.set(0.38, 0.05, 0.38); g.add(brim);
+  const hat = mesh(G.cyl, k, 0, 2.72, 0); hat.scale.set(0.25, 0.5, 0.25); g.add(hat);
+  const band = mesh(G.cyl, M(0xE2384D), 0, 2.56, 0); band.scale.set(0.26, 0.08, 0.26); g.add(band);
+  const nose = mesh(G.cone, M(0xF28C28), 0, 2.15, 0.48); nose.scale.set(0.07, 0.36, 0.07); nose.rotation.x = Math.PI / 2; g.add(nose);
+  [-1, 1].forEach(s => { const e = mesh(G.sphere, k, s * 0.12, 2.27, 0.31); e.scale.setScalar(0.045); g.add(e); });
+  const scarf = mesh(new THREE.TorusGeometry(0.36, 0.09, 6, 16), M(0x05B58D), 0, 1.86, 0); scarf.rotation.x = Math.PI / 2; g.add(scarf);
+  [-1, 1].forEach(s => { const a = mesh(G.cyl, M(0x5A3A24), s * 0.75, 1.65, 0); a.scale.set(0.03, 0.8, 0.03); a.rotation.z = s * 1.0; g.add(a); });
+  return g;
+}
+function buildBank() {
+  const g = new THREE.Group(), w = M(0xEEF4FB);
+  const a = mesh(G.sphere, w, 0, 0, 0); a.scale.set(1.15, 0.62, 0.85); g.add(a);
+  const b = mesh(G.sphere, w, -0.6, 0, 0.15); b.scale.set(0.6, 0.45, 0.6); g.add(b);
+  const c = mesh(G.sphere, w, 0.65, 0, -0.1); c.scale.set(0.55, 0.42, 0.55); g.add(c);
+  // striped warning poles so it reads as "jump me"
+  [-1, 1].forEach(s => { const p = mesh(G.cyl, M(0xE2384D), s * 0.95, 0.55, 0.3); p.scale.set(0.05, 1.1, 0.05); g.add(p); const t = mesh(G.sphere, M(0xFFDE59, { emissive: 0x6B5200 }), s * 0.95, 1.12, 0.3); t.scale.setScalar(0.09); g.add(t); });
+  return g;
+}
+const pools = { key: [], snowman: [], bank: [] };
+const builders = { key: buildKey, snowman: buildSnowman, bank: buildBank };
+const active = [];
+function spawn(kind, lane, z, y) {
+  let g = pools[kind].pop();
+  if (!g) { g = builders[kind](); scene.add(g); }
+  g.visible = true;
+  const x = LANES[lane];
+  g.position.set(x, kind === 'key' ? y : 0, z);
+  g.rotation.set(0, 0, 0);
+  active.push({ kind, g, lane, x, y: kind === 'key' ? y : 0, z, done: false, spin: Math.random() * 6 });
+}
+function release(i) { const o = active[i]; o.g.visible = false; pools[o.kind].push(o.g); active.splice(i, 1); }
+
+/* ---------- sparkles ---------- */
+const sparkMat = new THREE.SpriteMaterial({ map: glowTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, color: 0xFFE89A });
+const sparks = [];
+for (let i = 0; i < 48; i++) { const s = new THREE.Sprite(sparkMat.clone()); s.visible = false; scene.add(s); sparks.push({ s, life: 0, max: 1, v: new THREE.Vector3() }); }
+function burst(pos) {
+  let n = 0;
+  for (const p of sparks) {
+    if (p.s.visible) continue;
+    p.s.visible = true; p.life = 0; p.max = rand(0.35, 0.6);
+    p.s.position.copy(pos); p.v.set(rand(-4, 4), rand(1, 6), rand(-2, 3));
+    const sc = rand(0.25, 0.5); p.s.scale.set(sc, sc, 1);
+    if (++n >= 14) break;
+  }
+}
+
+/* ================================================================
+ * GAME STATE
+ * ================================================================ */
+let state = 'loading';  // loading | menu | ready | play | ending | over
+let lane = 1, laneX = 0, jumpY = 0, jumpV = 0, speed = 0, dist = 0, nextSpawn = 0, lastBanner = 0;
+let keys = 0, lives = CONFIG.lives, timeLeft = CONFIG.roundSeconds, invuln = 0, shake = 0, endT = 0, endReason = '';
+let t = 0, bellT = 0, lastSecond = CONFIG.roundSeconds, streak = 0;
+let best = store.get('best', 0);
+const JUMP_V = 8.2, GRAV = 22;
+
+function resetRound() {
+  while (active.length) release(active.length - 1);
+  lane = 1; laneX = 0; jumpY = 0; jumpV = 0; speed = 0; dist = 0; nextSpawn = 26; lastBanner = 0;
+  keys = 0; lives = CONFIG.lives; timeLeft = CONFIG.roundSeconds; invuln = 0; shake = 0; streak = 0; lastSecond = CONFIG.roundSeconds;
+  keysEl.textContent = '0'; timeEl.textContent = CONFIG.roundSeconds; timePill.classList.remove('low'); paintHearts(lives);
+  // a welcome line of keys straight ahead
+  for (let i = 0; i < 5; i++) spawn('key', 1, -18 - i * 3.2, 1.3);
+  banner.position.z = -48;
+}
+
+/* ---------- level patterns: always leave at least one safe path ---------- */
+function spawnPattern() {
+  const Z = -112, difficulty = Math.min(1, dist / 1400);
+  const r = Math.random(), L = (Math.random() * 3) | 0, others = [0, 1, 2].filter(x => x !== L);
+  const keyRow = (ln, n, y = 1.3, z0 = Z) => { for (let i = 0; i < n; i++) spawn('key', ln, z0 - i * 3.2, y); };
+  if (r < 0.22) {                         // a snowman with keys in a neighbouring lane
+    spawn('snowman', L, Z); keyRow(pick(others), 4);
+  } else if (r < 0.42) {                  // snowbank with a key arc over it (jump for the bonus)
+    spawn('bank', L, Z);
+    for (let i = 0; i < 5; i++) { const k = i / 4; spawn('key', L, Z + 6.5 - i * 3.2, 1.3 + Math.sin(k * Math.PI) * 1.8); }
+  } else if (r < 0.6) {                   // two snowmen: find the gap
+    spawn('snowman', others[0], Z); spawn('snowman', others[1], Z); keyRow(L, 3, 1.3, Z + 3);
+  } else if (r < 0.74) {                  // wall of snowbanks: jump!
+    [0, 1, 2].forEach(l => spawn('bank', l, Z)); keyRow(L, 3, 2.6, Z + 3);
+  } else if (r < 0.88) {                  // zig-zag keys
+    let ln = L; for (let i = 0; i < 6; i++) { spawn('key', ln, Z - i * 3.4, 1.3); if (i % 2) ln = Math.max(0, Math.min(2, ln + (Math.random() < 0.5 ? -1 : 1))); }
+  } else {                                // slalom
+    spawn('snowman', L, Z); spawn('snowman', pick(others), Z - 16 - (1 - difficulty) * 8); keyRow(pick(others), 3, 1.3, Z - 8);
+  }
+  return rand(24, 34) - difficulty * 8;  // metres until the next pattern
+}
+
+/* ---------- input ---------- */
+function move(dir) {
+  if (state === 'ready') go();
+  if (state !== 'play') return;
+  const n = Math.max(0, Math.min(2, lane + dir));
+  if (n !== lane) { lane = n; Sound.swish(); }
+}
+function jump() {
+  if (state === 'ready') go();
+  if (state !== 'play') return;
+  if (jumpY < 0.15) { jumpV = JUMP_V; Sound.jump(); buzz(10); }
+}
+function go() {
+  state = 'play'; hintEl.classList.add('off'); speed = CONFIG.startSpeed;
+  ping(CONFIG.playEndpoint, { event: 'play', game: 'sleigh-ride', t: Date.now() });
+}
+const KEYS = { ArrowLeft: () => move(-1), a: () => move(-1), A: () => move(-1), ArrowRight: () => move(1), d: () => move(1), D: () => move(1),
+  ArrowUp: jump, w: jump, W: jump, ' ': jump };
+addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA|BUTTON/.test(e.target.tagName) && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (e.key === 'm' || e.key === 'M') { muteBtn.click(); return; }
+  const f = KEYS[e.key];
+  if (f && (state === 'ready' || state === 'play')) { e.preventDefault(); if (!e.repeat) f(); }
+});
+// Swipes fire mid-gesture; a quick tap on the left/right of the screen also steers.
+const cv = renderer.domElement;
+let sw = null;
+cv.addEventListener('pointerdown', e => {
+  Sound.unlock(); sw = { id: e.pointerId, x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, used: false, t: performance.now() };
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+});
+cv.addEventListener('pointermove', e => {
+  if (!sw || e.pointerId !== sw.id) return;
+  const dx = e.clientX - sw.x, dy = e.clientY - sw.y;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 26) return;
+  if (Math.abs(dx) > Math.abs(dy)) move(dx > 0 ? 1 : -1); else if (dy < 0) jump();
+  sw.x = e.clientX; sw.y = e.clientY; sw.used = true;
+});
+cv.addEventListener('pointerup', e => {
+  if (!sw || e.pointerId !== sw.id) return;
+  if (!sw.used && performance.now() - sw.t < 350) {
+    const w = cv.clientWidth, x = e.clientX - cv.getBoundingClientRect().left;
+    if (x < w * 0.38) move(-1); else if (x > w * 0.62) move(1); else jump();
+  }
+  sw = null;
+});
+cv.addEventListener('pointercancel', () => { sw = null; });
+
+/* ---------- update ---------- */
+const ZHIT_A = -2.9, ZHIT_B = -0.6;   // the stretch where the reindeer are
+function update(dt) {
+  t += dt;
+  if (state === 'play') {
+    speed = Math.min(CONFIG.maxSpeed, speed + CONFIG.accel * dt);
+    timeLeft = Math.max(0, timeLeft - dt);
+    const sec = Math.ceil(timeLeft);
+    if (sec !== lastSecond) {
+      lastSecond = sec; timeEl.textContent = sec; timePill.classList.toggle('low', sec <= 10);
+      if (sec <= 5 && sec > 0) Sound.tick();
+    }
+    if (timeLeft <= 0) finish('time');
+    bellT -= dt; if (bellT <= 0) { bellT = rand(0.22, 0.34) * (18 / Math.max(14, speed)); Sound.bell(); }
+  } else if (state === 'ending') {
+    speed = Math.max(0, speed - 30 * dt);
+    endT -= dt; if (endT <= 0) showOver();
+  }
+
+  const step = speed * dt;
+  dist += step;
+  if (state === 'play' && dist >= nextSpawn) nextSpawn = dist + spawnPattern();
+
+  // lane glide + jump
+  const targetX = LANES[lane];
+  laneX += (targetX - laneX) * Math.min(1, dt * 13);
+  if (jumpY > 0 || jumpV > 0) { jumpV -= GRAV * dt; jumpY = Math.max(0, jumpY + jumpV * dt); if (jumpY === 0) jumpV = 0; }
+  rig.position.set(laneX, jumpY, 0);
+  invuln = Math.max(0, invuln - dt);
+  shake = Math.max(0, shake - dt);
+
+  // camera: slight lean into turns, gentle bob from the gallop
+  const lean = (targetX - laneX) * 0.06;
+  const gallop = speed > 0 ? Math.sin(t * (6 + speed * 0.35)) : 0;
+  camera.position.set(lean * -2, 2.75 + (reduceMotion ? 0 : gallop * 0.035), 3.4);
+  camera.lookAt(laneX * 0 + lean * -6, 1.55, -14);
+  camera.rotation.z += lean;
+  if (shake > 0 && !reduceMotion) { camera.position.x += rand(-1, 1) * shake * 0.5; camera.position.y += rand(-1, 1) * shake * 0.3; }
+
+  // reindeer gallop
+  deer.forEach((d, i) => {
+    const ph = t * (6 + speed * 0.35) + i * 0.9, amp = speed > 0 ? 0.6 : 0.05;
+    d.userData.legs.forEach((leg, j) => { leg.rotation.x = Math.sin(ph + (j % 2 ? Math.PI : 0) + (j > 1 ? 0.6 : 0)) * amp; });
+    d.position.y = speed > 0 ? Math.abs(Math.sin(ph)) * 0.12 : Math.sin(t * 2 + i) * 0.01;
+    d.userData.head.rotation.x = Math.sin(ph) * 0.08;
+    d.visible = invuln > 0 ? Math.floor(t * 16) % 2 === 0 : true;
+  });
+  // reins follow the reindeer
+  reins.forEach((l, i) => {
+    const p = l.geometry.attributes.position, m = mittens[i], d = deer[i];
+    tmpV.copy(m.position); p.setXYZ(0, tmpV.x, tmpV.y, tmpV.z);
+    p.setXYZ(2, d.position.x, d.position.y + 1.45, d.position.z - 0.35);
+    p.setXYZ(1, (tmpV.x + d.position.x) / 2, (tmpV.y + d.position.y + 1.45) / 2 - 0.12, (tmpV.z + d.position.z) / 2);
+    p.needsUpdate = true;
+  });
+  mittens.forEach((m, i) => { m.position.y = 1.82 + Math.sin(t * 7 + i) * 0.02 * (speed > 0 ? 1 : 0); });
+
+  // scroll the world toward the camera
+  roadTex.offset.y = (roadTex.offset.y + step / TILE) % 1;
+  for (const o of scenery) {
+    o.g.position.z += step;
+    if (o.g.position.z > 14) {
+      o.g.position.z -= SPAN;
+      o.layout();
+      if (o.kind === 'house') maybeSign(o);
+    }
+  }
+  banner.position.z += step;
+  if (banner.position.z > 14 && dist - lastBanner > 380) { banner.position.z = -115; lastBanner = dist; }
+
+  // collectibles & obstacles
+  for (let i = active.length - 1; i >= 0; i--) {
+    const o = active[i];
+    o.z += step; o.g.position.z = o.z;
+    if (o.kind === 'key') { o.g.rotation.y = t * 3 + o.spin; o.g.position.y = o.y + Math.sin(t * 4 + o.spin) * 0.08; }
+    if (!o.done && o.z > ZHIT_A && o.z < ZHIT_B && Math.abs(o.x - laneX) < 1.15 && (state === 'play')) {
+      if (o.kind === 'key') {
+        if (Math.abs(o.y - (1.3 + jumpY)) < 1.25) { o.done = true; collect(o); release(i); continue; }
+      } else if (invuln <= 0) {
+        const clear = o.kind === 'bank' ? jumpY > 0.7 : false;
+        if (!clear) { o.done = true; hit(); }
+      }
+    }
+    if (o.z > 8) release(i);
+  }
+
+  // sparkles
+  for (const p of sparks) {
+    if (!p.s.visible) continue;
+    p.life += dt; if (p.life >= p.max) { p.s.visible = false; continue; }
+    p.v.y -= 12 * dt; p.s.position.addScaledVector(p.v, dt); p.s.position.z += step;
+    p.s.material.opacity = 1 - p.life / p.max;
+  }
+  // snow drifts down and streams past
+  if (SNOW_N) {
+    const a = snowGeo.attributes.position, arr = a.array;
+    for (let i = 0; i < SNOW_N; i++) {
+      arr[i * 3 + 1] -= (1.2 + (i % 5) * 0.25) * dt;
+      arr[i * 3 + 2] += step * 0.9;
+      arr[i * 3] += Math.sin(t + i) * 0.3 * dt;
+      if (arr[i * 3 + 1] < 0 || arr[i * 3 + 2] > 6) { arr[i * 3] = rand(-25, 25); arr[i * 3 + 1] = rand(2, 16); arr[i * 3 + 2] = rand(-70, -10); }
+    }
+    a.needsUpdate = true;
+  }
+}
+
+function collect(o) {
+  keys++; streak++;
+  keysEl.textContent = keys;
+  keysPill.classList.remove('bump'); void keysPill.offsetWidth; keysPill.classList.add('bump');
+  burst(o.g.position); Sound.key(keys); buzz(8);
+  if (streak === 10) toast('🔥 10 in a row!');
+  else if (keys === 25) toast('🏡 25 keys!');
+  else if (keys === 50) toast('🌟 50 keys!');
+}
+function hit() {
+  lives--; streak = 0; paintHearts(lives);
+  invuln = 1.6; shake = 0.45; speed = Math.max(CONFIG.startSpeed * 0.7, speed * 0.6);
+  flashEl.classList.remove('go'); void flashEl.offsetWidth; flashEl.classList.add('go');
+  Sound.hit(); buzz([40, 30, 40]);
+  if (lives <= 0) finish('crash'); else toast(lives === 1 ? 'Last life!' : 'Ouch!');
+}
+function finish(reason) {
+  if (state !== 'play') return;
+  state = 'ending'; endReason = reason; endT = reason === 'crash' ? 1.0 : 0.7;
+  if (reason === 'time') Sound.end();
+}
+
+/* ---------- render loop ---------- */
+function resize() {
+  const w = stageEl.clientWidth || innerWidth, h = stageEl.clientHeight || innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = camera.aspect < 0.8 ? 78 : camera.aspect < 1.2 ? 70 : 60;   // keep all three lanes in view on tall phones
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+  update(dt);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
+
+/* ---------------- screens ---------------- */
+function startGame() {
+  Sound.unlock();
+  startOv.hidden = true; overOv.hidden = true;
+  resetRound();
+  state = 'ready';
+  hintEl.innerHTML = touchFirst ? 'Swipe or tap to set off!<small>Left / right to steer, swipe up to fly</small>' : 'Press an arrow key to set off!<small>← → steer · ↑ or Space to fly</small>';
+  hintEl.classList.remove('off');
+  cv.focus({ preventScroll: true });
+}
+function showOver() {
+  state = 'over';
+  const newBest = keys > best;
+  if (newBest) { best = keys; store.set('best', best); }
+  $('[data-over-eyebrow]').textContent = endReason === 'crash' ? 'Out of lives!' : "Time's up!";
+  $('[data-over-title]').textContent = keys >= 40 ? 'Legendary ride!' : keys >= 25 ? 'What a ride!' : keys >= 10 ? 'Nice sleighing!' : keys >= 1 ? 'Good start!' : 'Give it another go!';
+  const bestEl = $('[data-best]');
+  bestEl.textContent = newBest && keys > 0 ? '★ New personal best!' : 'Your best: ' + best;
+  bestEl.classList.toggle('new', newBest && keys > 0);
+  const finalEl = $('[data-final]'), target = keys, start = performance.now();
+  (function count(now) { const k = Math.min(1, (now - start) / 700); finalEl.textContent = Math.round(target * (1 - (1 - k) * (1 - k))); if (k < 1) requestAnimationFrame(count); })(start);
+  live.textContent = (endReason === 'crash' ? 'Out of lives. ' : 'Time up. ') + keys + ' keys collected.';
+  overOv.hidden = false;
+  setTimeout(() => $('[data-again]').focus({ preventScroll: true }), 60);
+}
+$('[data-play]').addEventListener('click', startGame);
+$('[data-again]').addEventListener('click', startGame);
+
+$('[data-share]').addEventListener('click', function () {
+  const btn = this;
+  const text = `I collected ${keys} keys on the ${CONFIG.brand} Christmas Sleigh Ride!` + (CONFIG.charity ? ` Every play gives ${CONFIG.charity.perPlay} to ${CONFIG.charity.name}.` : '') + ' Can you beat me?';
+  const url = location.href.split('#')[0];
+  if (navigator.share) { navigator.share({ title: 'Christmas Sleigh Ride', text, url }).catch(() => {}); return; }
+  const done = () => { btn.textContent = 'Link copied!'; setTimeout(() => { btn.textContent = 'Share with a friend'; }, 1800); };
+  if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(done, () => prompt('Copy this link:', url));
+  else prompt('Copy this link:', url);
+});
+
+const form = $('[data-lead]'), msg = $('[data-lead-msg]');
+if (CONFIG.leadEndpoint) form.hidden = false;
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const email = form.email.value.trim();
+  msg.className = 'msg';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { msg.textContent = 'Please enter a valid email.'; msg.classList.add('bad'); form.email.focus(); return; }
+  if (!form.consent.checked) { msg.textContent = 'Please tick the box so we can email you.'; msg.classList.add('bad'); return; }
+  const btn = form.querySelector('button'); btn.disabled = true; btn.textContent = 'Sending…';
+  fetch(CONFIG.leadEndpoint, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ name: form.name.value.trim(), email, consent: true, keys, source: 'christmas-sleigh-ride', page: location.href }),
+  }).then(r => {
+    if (!r.ok) throw new Error(r.status);
+    form.innerHTML = `<h3>You're on the list 🎄</h3><p>Thanks! Watch your inbox for ${CONFIG.town} market updates.</p>`;
+  }).catch(() => { btn.disabled = false; btn.textContent = 'Sign me up'; msg.textContent = 'Something went wrong. Please try again.'; msg.classList.add('bad'); });
+});
+const contact = $('[data-contact]'); let links = '';
+if (CONFIG.phone) links += `<a class="btn ghost" href="tel:${CONFIG.phone.replace(/[^\d+]/g, '')}">📞 Call Aaron</a>`;
+if (CONFIG.website) links += `<a class="btn ghost" href="${CONFIG.website}" target="_blank" rel="noopener">🏡 See listings</a>`;
+if (links) { contact.innerHTML = links; contact.hidden = false; }
+
+// Read-only peek for automated testing.
+window.SleighRide = { peek: () => ({ state, keys, lives, lane, speed: +speed.toFixed(1), dist: Math.round(dist), active: active.length, timeLeft: +timeLeft.toFixed(1) }) };
+
+/* ---------------- boot ---------------- */
+resetRound();
+state = 'menu';
+paintHearts(lives);
+requestAnimationFrame(frame);
+window.__sleighReady = true;
+$('[data-loading]').hidden = true;
+</script>
+</body>
+</html>
