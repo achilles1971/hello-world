@@ -403,7 +403,7 @@ function signTexture(sold) {
     c.fillStyle = '#05B58D'; c.font = '800 44px Outfit, sans-serif'; c.fillText('REALTY', 206, 178);
     c.fillStyle = sold ? '#E2384D' : '#05B58D'; c.fillRect(0, 228, w, 124);
     c.fillStyle = '#FFFFFF'; c.font = '800 84px Outfit, sans-serif'; c.textAlign = 'center';
-    c.fillText(sold ? 'SOLD!' : 'FOR SALE', w / 2, 292);
+    c.fillText(sold ? 'SOLD' : 'FOR SALE', w / 2, 292);
     c.strokeStyle = '#F2B544'; c.lineWidth = 10; c.strokeRect(5, 5, w - 10, h - 10);
   });
   brandedTextures.push(tex);
@@ -450,7 +450,7 @@ function buildHouse(side) {
     g.position.x = side * (ROAD_W / 2 + 3.2 + d / 2 + rand(0, 1.2));
     // Most houses get a brokerage yard sign at the roadside, turned to face the oncoming sleigh.
     sign.visible = Math.random() < 0.7;
-    sign.userData.board.material = Math.random() < 0.65 ? SIGN_MATS.sold : SIGN_MATS.sale;
+    sign.userData.board.material = SIGN_MATS.sold;
     sign.position.set(side * (ROAD_W / 2 + 2.3) - g.position.x, 0, w / 2 - 1.2);
     sign.rotation.y = -side * 0.55;
   } };
